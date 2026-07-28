@@ -21,9 +21,12 @@
     bookmarks: false,
   });
   const SOURCE_ORDER = ['tabGroups', 'custom', 'bookmarks'];
+  const BOOKMARK_PERMISSION = Object.freeze({ permissions: ['bookmarks'] });
   let sourcePrefs = { ...DEFAULT_SOURCES };
   let dragState = null;
   let rendering = false;
+  let renderPending = false;
+  let bookmarkListenerEvents = [];
 
   const sourceLabel = (name) => t(
     name === 'tabGroups' ? 'sourceTabGroups'
@@ -61,7 +64,29 @@
 
   async function hasBookmarkPermission() {
     if (!chrome.permissions || !chrome.permissions.contains) return false;
-    return chrome.permissions.contains({ permissions: ['bookmarks'] });
+    return chrome.permissions.contains(BOOKMARK_PERMISSION);
+  }
+
+  function syncBookmarkListeners(enabled) {
+    if (enabled && !bookmarkListenerEvents.length && chrome.bookmarks) {
+      bookmarkListenerEvents = [
+        chrome.bookmarks.onCreated,
+        chrome.bookmarks.onChanged,
+        chrome.bookmarks.onMoved,
+        chrome.bookmarks.onRemoved,
+        chrome.bookmarks.onChildrenReordered,
+      ].filter(event => event && event.addListener);
+      for (const event of bookmarkListenerEvents) {
+        event.addListener(scheduleSourceRender);
+      }
+      return;
+    }
+    if (!enabled && bookmarkListenerEvents.length) {
+      for (const event of bookmarkListenerEvents) {
+        if (event.removeListener) event.removeListener(scheduleSourceRender);
+      }
+      bookmarkListenerEvents = [];
+    }
   }
 
   function applyI18n() {
@@ -121,22 +146,33 @@
 
   async function setSourceEnabled(name, enabled) {
     if (!SOURCE_ORDER.includes(name)) return;
-    if (name === 'bookmarks' && enabled && !(await hasBookmarkPermission())) {
+    const wasEnabled = !!sourcePrefs[name];
+    if (name === 'bookmarks' && enabled) {
       let granted = false;
       try {
-        granted = await chrome.permissions.request({ permissions: ['bookmarks'] });
-      } catch {}
+        // Chrome requires optional permission requests to happen directly in a
+        // user gesture. Do not await contains() or any other promise first.
+        granted = await chrome.permissions.request(BOOKMARK_PERMISSION);
+      } catch (err) {
+        console.warn('[tab-home] bookmark permission request failed:', err);
+        showToast(t('bookmarkPermissionError'));
+        sourcePrefs.bookmarks = wasEnabled;
+        paintSourceControls();
+        return false;
+      }
       if (!granted) {
         showToast(t('bookmarkPermissionDenied'));
-        sourcePrefs.bookmarks = false;
+        sourcePrefs.bookmarks = wasEnabled;
         paintSourceControls();
-        return;
+        return false;
       }
+      syncBookmarkListeners(true);
     }
     sourcePrefs[name] = enabled;
     await chrome.storage.local.set({ [SOURCE_PREF_KEY]: sourcePrefs });
     paintSourceControls();
     await render();
+    return true;
   }
 
   function sourceSection(name, body, count = null) {
@@ -353,26 +389,34 @@
   }
 
   async function render() {
-    if (rendering) return;
+    if (rendering) {
+      renderPending = true;
+      return;
+    }
     const list = document.getElementById('favoritesList');
     const empty = document.getElementById('favoritesEmpty');
     if (!list || !empty) return;
     rendering = true;
     try {
-      await loadPrefs();
-      applyI18n();
-      paintSourceControls();
-      const sections = [];
-      if (sourcePrefs.tabGroups) sections.push(await renderTabGroupsSource());
-      if (sourcePrefs.custom) sections.push(await renderCustomSource());
-      if (sourcePrefs.bookmarks) sections.push(await renderBookmarksSource());
-      list.innerHTML = sections.join('');
-      empty.style.display = sections.length ? 'none' : 'block';
-      if (!sections.length) empty.textContent = t('sourceSettings');
-    } catch (err) {
-      console.warn('[tab-home] source render failed:', err);
-      empty.style.display = 'block';
-      empty.textContent = String(err && err.message ? err.message : err);
+      do {
+        renderPending = false;
+        try {
+          await loadPrefs();
+          applyI18n();
+          paintSourceControls();
+          const sections = [];
+          if (sourcePrefs.tabGroups) sections.push(await renderTabGroupsSource());
+          if (sourcePrefs.custom) sections.push(await renderCustomSource());
+          if (sourcePrefs.bookmarks) sections.push(await renderBookmarksSource());
+          list.innerHTML = sections.join('');
+          empty.style.display = sections.length ? 'none' : 'block';
+          if (!sections.length) empty.textContent = t('sourceSettings');
+        } catch (err) {
+          console.warn('[tab-home] source render failed:', err);
+          empty.style.display = 'block';
+          empty.textContent = String(err && err.message ? err.message : err);
+        }
+      } while (renderPending);
     } finally {
       rendering = false;
     }
@@ -448,12 +492,16 @@
 
   function showEditor({ title, fields, submitLabel = t('save') }) {
     return new Promise(resolve => {
+      const returnFocus = document.activeElement;
       const overlay = document.createElement('div');
       overlay.id = 'sourceEditorModal';
       overlay.className = 'category-modal';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-labelledby', 'sourceEditorTitle');
       overlay.innerHTML = `
         <form class="category-form" id="sourceEditorForm">
-          <div class="source-editor-title">${escapeHtml(title)}</div>
+          <div class="source-editor-title" id="sourceEditorTitle">${escapeHtml(title)}</div>
           ${fields.map(field => `
             <label class="favorites-form-label" for="source-editor-${escapeHtml(field.name)}">${escapeHtml(field.label)}</label>
             <input class="favorites-form-input" id="source-editor-${escapeHtml(field.name)}"
@@ -468,12 +516,15 @@
       const cleanup = result => {
         document.removeEventListener('keydown', onKey, true);
         overlay.remove();
+        if (returnFocus && returnFocus.isConnected && returnFocus.focus) returnFocus.focus();
         resolve(result);
       };
       const onKey = event => {
         if (event.key === 'Escape') {
           event.preventDefault();
           cleanup(null);
+        } else if (event.key === 'Tab' && window.trapFocusWithin) {
+          window.trapFocusWithin(event, overlay);
         }
       };
       overlay.addEventListener('click', event => {
@@ -999,15 +1050,26 @@
     chrome.tabGroups.onUpdated.addListener(scheduleSourceRender);
   }
 
-  if (chrome.bookmarks) {
-    chrome.bookmarks.onCreated.addListener(scheduleSourceRender);
-    chrome.bookmarks.onChanged.addListener(scheduleSourceRender);
-    chrome.bookmarks.onMoved.addListener(scheduleSourceRender);
-    chrome.bookmarks.onRemoved.addListener(scheduleSourceRender);
-    if (chrome.bookmarks.onChildrenReordered) {
-      chrome.bookmarks.onChildrenReordered.addListener(scheduleSourceRender);
-    }
+  if (chrome.permissions && chrome.permissions.onAdded) {
+    chrome.permissions.onAdded.addListener(permissions => {
+      if (!permissions.permissions || !permissions.permissions.includes('bookmarks')) return;
+      syncBookmarkListeners(true);
+      scheduleSourceRender();
+    });
   }
+
+  if (chrome.permissions && chrome.permissions.onRemoved) {
+    chrome.permissions.onRemoved.addListener(permissions => {
+      if (!permissions.permissions || !permissions.permissions.includes('bookmarks')) return;
+      syncBookmarkListeners(false);
+      showToast(t('bookmarkPermissionRevoked'));
+      scheduleSourceRender();
+    });
+  }
+
+  hasBookmarkPermission()
+    .then(granted => syncBookmarkListeners(granted))
+    .catch(err => console.warn('[tab-home] bookmark permission check failed:', err));
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;

@@ -168,8 +168,10 @@
 <!-- ================================================================
      FAVORITES ADD / EDIT MODAL — floats over the page; backdrop closes
      ================================================================ -->
-<div class="favorites-modal" id="favoritesModal" style="display:none">
+<div class="favorites-modal" id="favoritesModal" role="dialog" aria-modal="true"
+     aria-labelledby="favoritesDialogTitle" style="display:none">
   <form class="favorites-form favorites-form-modal" id="favoritesForm">
+    <h2 class="sr-only" id="favoritesDialogTitle">Add or edit favorite</h2>
     <label class="favorites-form-label" for="favoritesUrlInput" id="favoritesUrlLabel">URL</label>
     <input type="text" class="favorites-form-input" id="favoritesUrlInput" placeholder="https://..." required autocomplete="off" spellcheck="false">
     <label class="favorites-form-label" for="favoritesTitleInput" id="favoritesTitleLabel">Title</label>
@@ -202,8 +204,10 @@
 <!-- ================================================================
      CATEGORY ADD / RENAME MODAL
      ================================================================ -->
-<div class="category-modal" id="categoryModal" style="display:none">
+<div class="category-modal" id="categoryModal" role="dialog" aria-modal="true"
+     aria-labelledby="categoryDialogTitle" style="display:none">
   <form class="category-form" id="categoryForm">
+    <h2 class="sr-only" id="categoryDialogTitle">Add or rename category</h2>
     <label class="favorites-form-label" for="categoryNameInput" id="categoryNameLabel">Category name</label>
     <input type="text" class="favorites-form-input" id="categoryNameInput"
            maxlength="60" required autocomplete="off">
@@ -218,8 +222,10 @@
 <!-- ================================================================
      CONFIRM DIALOG — generic in-page modal that replaces window.confirm()
      ================================================================ -->
-<div class="confirm-modal" id="confirmModal" style="display:none">
+<div class="confirm-modal" id="confirmModal" role="alertdialog" aria-modal="true"
+     aria-labelledby="confirmDialogTitle" aria-describedby="confirmMessage" style="display:none">
   <div class="confirm-card">
+    <h2 class="sr-only" id="confirmDialogTitle">Confirm action</h2>
     <div class="confirm-message" id="confirmMessage"></div>
     <div class="confirm-actions">
       <button type="button" class="confirm-cancel" id="confirmCancelBtn">Cancel</button>
@@ -232,7 +238,7 @@
      TOAST — floats above everything, used for action confirmations
      Hidden by default via CSS (opacity:0, translateY)
      ================================================================ -->
-<div class="toast" id="toast">
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
   <!-- Checkmark circle icon (Heroicons outline) -->
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

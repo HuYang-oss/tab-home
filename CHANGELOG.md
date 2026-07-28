@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 — 2026-07-28
+
+- Fixed the optional bookmark permission request so Chrome prompts directly from the user's click.
+- Added live permission grant/revoke handling and safe bookmark event-listener registration.
+- Coalesced source refreshes without dropping the final state during event bursts.
+- Improved dialog focus management, keyboard navigation, focus indicators, and toast announcements.
+
 ## 1.2.0 — 2026-07-28
 
 - Added a persistent multi-select source menu for custom favorites, current-window Chrome tab groups, and the full Chrome bookmark tree.
