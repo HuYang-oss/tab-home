@@ -54,6 +54,8 @@ const STRINGS = {
     sourceTabGroupsEmpty: 'No tab groups are open in this window.',
     sourceBookmarksEmpty: 'No bookmarks in this folder.',
     bookmarkPermissionDenied: 'Bookmark access was not granted',
+    bookmarkPermissionError: 'Chrome could not request bookmark access. Reload the extension and try again.',
+    bookmarkPermissionRevoked: 'Bookmark access was removed',
     unnamedTabGroup: 'Untitled group', bookmarkBar: 'Bookmarks bar',
     otherBookmarks: 'Other bookmarks', mobileBookmarks: 'Mobile bookmarks',
     rename: 'Rename', close: 'Close', deleteFolder: 'Delete folder',
@@ -69,6 +71,9 @@ const STRINGS = {
     bookmarkUpdated: 'Bookmark updated', bookmarkDeleted: 'Bookmark deleted',
     tabGroupUpdated: 'Tab group updated', tabGroupClosed: 'Tab group closed',
     openBookmarkSettings: 'Enable bookmarks',
+    favoriteDialog: 'Add or edit favorite',
+    categoryDialog: 'Add or rename category',
+    confirmDialog: 'Confirm action',
     refreshIcon: 'Refresh icon', iconRefreshing: 'Refreshing icon…',
     iconRefreshed: 'Icon refreshed', iconRefreshFailed: 'Could not find a sharper icon',
     theme: 'Theme', themeSystem: 'Follow system', themeLight: 'Light', themeDark: 'Dark',
@@ -122,6 +127,8 @@ const STRINGS = {
     sourceTabGroupsEmpty: '当前窗口没有已打开的标签页分组。',
     sourceBookmarksEmpty: '此文件夹中没有书签。',
     bookmarkPermissionDenied: '未获得书签访问权限',
+    bookmarkPermissionError: 'Chrome 无法请求书签权限，请重新加载扩展后再试',
+    bookmarkPermissionRevoked: '书签访问权限已被移除',
     unnamedTabGroup: '未命名分组', bookmarkBar: '书签栏',
     otherBookmarks: '其他书签', mobileBookmarks: '移动设备书签',
     rename: '重命名', close: '关闭', deleteFolder: '删除文件夹',
@@ -137,6 +144,9 @@ const STRINGS = {
     bookmarkUpdated: '书签已更新', bookmarkDeleted: '书签已删除',
     tabGroupUpdated: '标签页分组已更新', tabGroupClosed: '标签页分组已关闭',
     openBookmarkSettings: '启用书签',
+    favoriteDialog: '添加或编辑收藏',
+    categoryDialog: '新建或重命名分类',
+    confirmDialog: '确认操作',
     refreshIcon: '刷新图标', iconRefreshing: '正在刷新图标…',
     iconRefreshed: '图标已刷新', iconRefreshFailed: '没有找到更清晰的图标',
     theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
@@ -328,6 +338,9 @@ function applyStaticI18n() {
   set('#favoritesFormDelete', 'remove');
   set('#categoryFormSubmit', 'add');
   set('#categoryModal .favorites-form-cancel', 'cancel');
+  set('#favoritesDialogTitle', 'favoriteDialog');
+  set('#categoryDialogTitle', 'categoryDialog');
+  set('#confirmDialogTitle', 'confirmDialog');
   set('#favoritesEmpty', 'favoritesEmpty');
 
   // Open tabs section default title (overwritten by render when tabs exist)
@@ -1050,10 +1063,34 @@ function animateCardOut(card) {
  */
 function showToast(message) {
   const toast = document.getElementById('toast');
+  if (!toast) return;
   document.getElementById('toastText').textContent = message;
+  clearTimeout(showToast.timer);
   toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), 2500);
+  showToast.timer = setTimeout(() => toast.classList.remove('visible'), 2500);
 }
+
+function trapFocusWithin(event, container) {
+  if (!container || event.key !== 'Tab') return;
+  const focusable = Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(element => element.getClientRects().length > 0);
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+window.trapFocusWithin = trapFocusWithin;
 
 /**
  * checkAndShowEmptyState()
@@ -2215,6 +2252,15 @@ async function renderDashboard() {
    ---------------------------------------------------------------- */
 
 document.addEventListener('click', async (e) => {
+  if (e.target.id === 'favoritesModal') {
+    closeFavoriteModal();
+    return;
+  }
+  if (e.target.id === 'categoryModal') {
+    closeCategoryModal();
+    return;
+  }
+
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
@@ -2259,7 +2305,7 @@ document.addEventListener('click', async (e) => {
   // ---- Favorite categories ----
   if (action === 'add-category') {
     closeThemeMenu();
-    await openCategoryForm();
+    await openCategoryForm('', actionEl);
     return;
   }
   if (action === 'cancel-category-form') {
@@ -2287,8 +2333,11 @@ document.addEventListener('click', async (e) => {
   }
   if (action === 'rename-category') {
     const categoryId = actionEl.dataset.categoryId;
+    const returnFocus = document.querySelector(
+      `.category-menu-btn[data-category-id="${CSS.escape(categoryId)}"]`
+    );
     closeCategoryMenu();
-    await openCategoryForm(categoryId);
+    await openCategoryForm(categoryId, returnFocus);
     return;
   }
   if (action === 'delete-category') {
@@ -2319,6 +2368,7 @@ document.addEventListener('click', async (e) => {
       modal.style.display = 'none';
       if (btn) btn.classList.remove('open');
     } else {
+      favoriteModalReturnFocus = actionEl;
       resetFavoriteForm();
       await populateCategorySelect(UNCATEGORIZED_ID);
       modal.style.display = 'flex';
@@ -2347,12 +2397,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // ---- Click on modal backdrop closes it ----
-  if (e.target.id === 'favoritesModal') {
-    closeFavoriteModal();
-    return;
-  }
-
   // (Favorite cards are real <a href> links — the browser handles
   //  navigation, modifier keys, middle-click, and right-click context
   //  menu natively. No JS click handler needed for plain opens.)
@@ -2377,8 +2421,11 @@ document.addEventListener('click', async (e) => {
   // ---- Menu items ----
   if (action === 'menu-edit-favorite') {
     const id = actionEl.dataset.favId;
+    const returnFocus = document.querySelector(
+      `.favorite-menu[data-fav-id="${CSS.escape(id)}"]`
+    );
     closeFavoriteMenu();
-    if (id) await openEditFavorite(id);
+    if (id) await openEditFavorite(id, returnFocus);
     return;
   }
   if (action === 'menu-refresh-icon') {
@@ -2636,6 +2683,8 @@ document.addEventListener('click', async (e) => {
    ---------------------------------------------------------------- */
 let pendingLogoDataUrl = null;
 let clearCustomLogo    = false;
+let favoriteModalReturnFocus = null;
+let categoryModalReturnFocus = null;
 
 function setLogoPreview(src, fallbackList = []) {
   const placeholder = document.getElementById('favoritesLogoPlaceholder');
@@ -2706,9 +2755,14 @@ function resetFavoriteForm() {
 function closeFavoriteModal() {
   const modal = document.getElementById('favoritesModal');
   const btn   = document.getElementById('favoritesAddToggle');
+  const returnFocus = favoriteModalReturnFocus;
+  favoriteModalReturnFocus = null;
   resetFavoriteForm();
   if (modal) modal.style.display = 'none';
   if (btn)   btn.classList.remove('open');
+  if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
+    setTimeout(() => returnFocus.focus(), 0);
+  }
 }
 
 /**
@@ -2718,6 +2772,7 @@ function closeFavoriteModal() {
  */
 function showConfirm({ message, okLabel, cancelLabel } = {}) {
   return new Promise((resolve) => {
+    const returnFocus = document.activeElement;
     const modal     = document.getElementById('confirmModal');
     const msgEl     = document.getElementById('confirmMessage');
     const okBtn     = document.getElementById('confirmOkBtn');
@@ -2738,6 +2793,9 @@ function showConfirm({ message, okLabel, cancelLabel } = {}) {
       cancelBtn.removeEventListener('click', onCancel);
       modal.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey, true);
+      if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
+        setTimeout(() => returnFocus.focus(), 0);
+      }
     };
     const onOk     = () => { cleanup(); resolve(true);  };
     const onCancel = () => { cleanup(); resolve(false); };
@@ -2745,6 +2803,7 @@ function showConfirm({ message, okLabel, cancelLabel } = {}) {
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); onCancel(); }
       else if (e.key === 'Enter') { e.stopPropagation(); onOk(); }
+      else if (e.key === 'Tab') trapFocusWithin(e, modal);
     };
 
     okBtn.addEventListener('click', onOk);
@@ -2757,10 +2816,11 @@ function showConfirm({ message, okLabel, cancelLabel } = {}) {
   });
 }
 
-async function openEditFavorite(id) {
+async function openEditFavorite(id, returnFocus = null) {
   const favs = await getFavorites();
   const fav  = favs.find(f => f.id === id);
   if (!fav) return;
+  favoriteModalReturnFocus = returnFocus;
   document.getElementById('favoritesUrlInput').value   = fav.url || '';
   document.getElementById('favoritesTitleInput').value = fav.title || '';
   await populateCategorySelect(fav.categoryId);
@@ -2807,13 +2867,14 @@ function closeFavoriteMenu() {
   if (menu) menu.remove();
 }
 
-async function openCategoryForm(categoryId = '') {
+async function openCategoryForm(categoryId = '', returnFocus = null) {
   const modal = document.getElementById('categoryModal');
   const form = document.getElementById('categoryForm');
   const input = document.getElementById('categoryNameInput');
   const submit = document.getElementById('categoryFormSubmit');
   const error = document.getElementById('categoryFormError');
   if (!modal || !form || !input || !submit || !error) return;
+  categoryModalReturnFocus = returnFocus;
   let name = '';
   if (categoryId) {
     const categories = await getFavoriteCategories();
@@ -2836,9 +2897,14 @@ function closeCategoryModal() {
   const modal = document.getElementById('categoryModal');
   const form = document.getElementById('categoryForm');
   const error = document.getElementById('categoryFormError');
+  const returnFocus = categoryModalReturnFocus;
+  categoryModalReturnFocus = null;
   if (modal) modal.style.display = 'none';
   if (form) form.dataset.editingCategoryId = '';
   if (error) error.textContent = '';
+  if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
+    setTimeout(() => returnFocus.focus(), 0);
+  }
 }
 
 function openCategoryMenu(anchorEl, categoryId) {
@@ -2914,8 +2980,20 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Escape closes whichever overlay is open.
+// Keep keyboard focus inside static dialogs; Escape closes the top overlay.
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    const categoryModal = document.getElementById('categoryModal');
+    const favoriteModal = document.getElementById('favoritesModal');
+    if (categoryModal && categoryModal.style.display !== 'none') {
+      trapFocusWithin(e, categoryModal);
+      return;
+    }
+    if (favoriteModal && favoriteModal.style.display !== 'none') {
+      trapFocusWithin(e, favoriteModal);
+      return;
+    }
+  }
   if (e.key !== 'Escape') return;
   const themeMenu = document.getElementById('themeMenu');
   if (themeMenu && themeMenu.style.display !== 'none') {
