@@ -39,6 +39,39 @@ const STRINGS = {
     favoritesEmpty: 'Nothing pinned yet. Click + to add a URL, or star a tab on the right.',
     addAFavorite: 'Add a favorite',
     edit: 'Edit', remove: 'Remove', moreActions: 'More',
+    category: 'Category', uncategorized: 'Uncategorized',
+    addCategory: 'Add category', categoryName: 'Category name',
+    renameCategory: 'Rename category', deleteCategory: 'Delete category',
+    expandCategory: 'Expand category', collapseCategory: 'Collapse category',
+    categoryAdded: 'Category added', categoryRenamed: 'Category renamed',
+    categoryDeleted: 'Category deleted; favorites moved to Uncategorized',
+    categoryDuplicate: 'A category with this name already exists',
+    categoryRequired: 'Enter a category name',
+    confirmDeleteCategory: (name) => `Delete “${name}”? Its favorites will move to Uncategorized.`,
+    sources: 'Sources', sourceCustom: 'Custom', sourceTabGroups: 'Tab groups',
+    sourceBookmarks: 'Bookmarks', sourceSettings: 'Choose favorite sources',
+    sourceCustomEmpty: 'No custom favorites yet.',
+    sourceTabGroupsEmpty: 'No tab groups are open in this window.',
+    sourceBookmarksEmpty: 'No bookmarks in this folder.',
+    bookmarkPermissionDenied: 'Bookmark access was not granted',
+    unnamedTabGroup: 'Untitled group', bookmarkBar: 'Bookmarks bar',
+    otherBookmarks: 'Other bookmarks', mobileBookmarks: 'Mobile bookmarks',
+    rename: 'Rename', close: 'Close', deleteFolder: 'Delete folder',
+    editBookmark: 'Edit bookmark', closeGroup: 'Close group',
+    confirmCloseTab: (title) => `Close the tab “${title}”?`,
+    confirmCloseGroup: (name, count) => `Close “${name}” and all ${count} tab${count !== 1 ? 's' : ''} in it?`,
+    confirmDeleteBookmark: (title) => `Delete the Chrome bookmark “${title}”?`,
+    confirmDeleteBookmarkFolder: (title, count) => `Delete the Chrome bookmark folder “${title}” and its ${count} item${count !== 1 ? 's' : ''}?`,
+    confirmCrossSourceMove: (title, from, to) => `Move “${title}” from ${from} to ${to}? The original will be removed after the destination is created.`,
+    movedBetweenSources: 'Moved between sources',
+    moveFailedSourceKept: 'Move failed; the original was kept',
+    movePartial: 'Destination created, but the original could not be removed',
+    bookmarkUpdated: 'Bookmark updated', bookmarkDeleted: 'Bookmark deleted',
+    tabGroupUpdated: 'Tab group updated', tabGroupClosed: 'Tab group closed',
+    openBookmarkSettings: 'Enable bookmarks',
+    refreshIcon: 'Refresh icon', iconRefreshing: 'Refreshing icon…',
+    iconRefreshed: 'Icon refreshed', iconRefreshFailed: 'Could not find a sharper icon',
+    theme: 'Theme', themeSystem: 'Follow system', themeLight: 'Light', themeDark: 'Dark',
     rightNow: 'Right now', openTabs: 'Open tabs', pinned: 'Pinned',
     nTabsCount: (n) => `${n} tab${n !== 1 ? 's' : ''}`,
     homepages: 'Homepages',
@@ -74,6 +107,39 @@ const STRINGS = {
     favoritesEmpty: '还没有收藏。点击 + 添加链接，或在右侧给标签页标星。',
     addAFavorite: '添加收藏',
     edit: '编辑', remove: '删除', moreActions: '更多',
+    category: '分类', uncategorized: '未分类',
+    addCategory: '新建分类', categoryName: '分类名称',
+    renameCategory: '重命名分类', deleteCategory: '删除分类',
+    expandCategory: '展开分类', collapseCategory: '折叠分类',
+    categoryAdded: '分类已添加', categoryRenamed: '分类已重命名',
+    categoryDeleted: '分类已删除，收藏已移入“未分类”',
+    categoryDuplicate: '已有同名分类',
+    categoryRequired: '请输入分类名称',
+    confirmDeleteCategory: (name) => `删除“${name}”？其中的收藏会移入“未分类”。`,
+    sources: '来源', sourceCustom: '自定义收藏', sourceTabGroups: '标签页分组',
+    sourceBookmarks: '书签', sourceSettings: '选择收藏来源',
+    sourceCustomEmpty: '还没有自定义收藏。',
+    sourceTabGroupsEmpty: '当前窗口没有已打开的标签页分组。',
+    sourceBookmarksEmpty: '此文件夹中没有书签。',
+    bookmarkPermissionDenied: '未获得书签访问权限',
+    unnamedTabGroup: '未命名分组', bookmarkBar: '书签栏',
+    otherBookmarks: '其他书签', mobileBookmarks: '移动设备书签',
+    rename: '重命名', close: '关闭', deleteFolder: '删除文件夹',
+    editBookmark: '编辑书签', closeGroup: '关闭分组',
+    confirmCloseTab: (title) => `关闭标签页“${title}”？`,
+    confirmCloseGroup: (name, count) => `关闭“${name}”及其中全部 ${count} 个标签页？`,
+    confirmDeleteBookmark: (title) => `删除 Chrome 书签“${title}”？`,
+    confirmDeleteBookmarkFolder: (title, count) => `删除 Chrome 书签文件夹“${title}”及其中的 ${count} 项内容？`,
+    confirmCrossSourceMove: (title, from, to) => `将“${title}”从${from}移动到${to}？目标创建成功后会移除原项目。`,
+    movedBetweenSources: '已在来源之间移动',
+    moveFailedSourceKept: '移动失败，原项目已保留',
+    movePartial: '目标已创建，但原项目移除失败',
+    bookmarkUpdated: '书签已更新', bookmarkDeleted: '书签已删除',
+    tabGroupUpdated: '标签页分组已更新', tabGroupClosed: '标签页分组已关闭',
+    openBookmarkSettings: '启用书签',
+    refreshIcon: '刷新图标', iconRefreshing: '正在刷新图标…',
+    iconRefreshed: '图标已刷新', iconRefreshFailed: '没有找到更清晰的图标',
+    theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
     rightNow: '正在打开', openTabs: '当前标签', pinned: '已固定',
     nTabsCount: (n) => `${n} 个标签`,
     homepages: '主页',
@@ -124,36 +190,101 @@ async function saveLang(lang) {
 
 
 /* ----------------------------------------------------------------
-   THEME — 'light' or 'dark', stored in chrome.storage.local
+   THEME — system / light / dark, stored in chrome.storage.local
    ---------------------------------------------------------------- */
 const ICON_SUN  = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>`;
 const ICON_MOON = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>`;
+const ICON_SYSTEM = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5h16.5v11.25H3.75V4.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 19.5h7.5M12 15.75v3.75"/></svg>`;
+
+const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+let currentThemeMode = 'system';
+
+function resolvedTheme(mode = currentThemeMode) {
+  if (mode === 'dark' || mode === 'light') return mode;
+  return systemThemeQuery.matches ? 'dark' : 'light';
+}
+
+function applyThemeMode() {
+  document.documentElement.dataset.themeMode = currentThemeMode;
+  document.documentElement.dataset.theme = resolvedTheme();
+  paintThemeToggle();
+}
 
 async function loadTheme() {
   try {
-    const { theme } = await chrome.storage.local.get('theme');
-    const t = theme === 'dark' ? 'dark' : 'light';
-    document.documentElement.dataset.theme = t;
+    const { themeMode, theme } = await chrome.storage.local.get(['themeMode', 'theme']);
+    if (themeMode === 'system' || themeMode === 'light' || themeMode === 'dark') {
+      currentThemeMode = themeMode;
+    } else if (theme === 'light' || theme === 'dark') {
+      currentThemeMode = theme;
+      await chrome.storage.local.set({ themeMode: currentThemeMode });
+    } else {
+      currentThemeMode = 'system';
+      await chrome.storage.local.set({ themeMode: 'system' });
+    }
   } catch {
-    document.documentElement.dataset.theme = 'light';
+    currentThemeMode = 'system';
   }
-  paintThemeToggle();
+  applyThemeMode();
 }
 
 function paintThemeToggle() {
   const btn = document.getElementById('themeToggle');
   if (!btn) return;
-  const isDark = document.documentElement.dataset.theme === 'dark';
-  btn.innerHTML = isDark ? ICON_SUN : ICON_MOON;
+  const key = currentThemeMode === 'system'
+    ? 'themeSystem'
+    : currentThemeMode === 'dark' ? 'themeDark' : 'themeLight';
+  btn.innerHTML = currentThemeMode === 'system'
+    ? ICON_SYSTEM
+    : currentThemeMode === 'dark' ? ICON_MOON : ICON_SUN;
+  btn.title = `${t('theme')}: ${t(key)}`;
+  btn.setAttribute('aria-label', btn.title);
+
+  document.querySelectorAll('.theme-menu-item[data-theme-mode]').forEach((item) => {
+    const mode = item.dataset.themeMode;
+    const itemKey = mode === 'system' ? 'themeSystem' : mode === 'dark' ? 'themeDark' : 'themeLight';
+    item.textContent = t(itemKey);
+    item.setAttribute('aria-checked', String(mode === currentThemeMode));
+  });
+  const menu = document.getElementById('themeMenu');
+  if (menu) menu.setAttribute('aria-label', t('theme'));
 }
 
-async function toggleTheme() {
-  const cur  = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  paintThemeToggle();
-  try { await chrome.storage.local.set({ theme: next }); } catch {}
+async function setThemeMode(mode) {
+  if (mode !== 'system' && mode !== 'light' && mode !== 'dark') return;
+  currentThemeMode = mode;
+  applyThemeMode();
+  try { await chrome.storage.local.set({ themeMode: mode }); } catch {}
 }
+
+function closeThemeMenu({ restoreFocus = false } = {}) {
+  const menu = document.getElementById('themeMenu');
+  const btn = document.getElementById('themeToggle');
+  if (menu) menu.style.display = 'none';
+  if (btn) {
+    btn.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) btn.focus();
+  }
+}
+
+function toggleThemeMenu() {
+  const menu = document.getElementById('themeMenu');
+  const btn = document.getElementById('themeToggle');
+  if (!menu || !btn) return;
+  const opening = menu.style.display === 'none';
+  closeFavoriteMenu();
+  closeCategoryMenu();
+  menu.style.display = opening ? 'block' : 'none';
+  btn.setAttribute('aria-expanded', String(opening));
+  if (opening) {
+    const active = menu.querySelector('[aria-checked="true"]') || menu.querySelector('button');
+    if (active) setTimeout(() => active.focus(), 0);
+  }
+}
+
+systemThemeQuery.addEventListener('change', () => {
+  if (currentThemeMode === 'system') applyThemeMode();
+});
 
 /**
  * applyStaticI18n()
@@ -173,12 +304,18 @@ function applyStaticI18n() {
 
   // Header toggle button — shows the OTHER language as a hint to click
   set('#langToggle', 'langToggle');
+  paintThemeToggle();
 
   // Favorites column
   set('.favorites-column .section-header h2', 'favorites');
   set('#favoritesAddToggle', 'addAFavorite', 'title');
+  set('#categoryAddToggle', 'addCategory', 'title');
+  set('#sourceToggle', 'sourceSettings', 'title');
+  if (window.TabHomeSources) window.TabHomeSources.applyI18n();
   set('#favoritesUrlLabel', 'urlLabel');
   set('#favoritesTitleLabel', 'titleLabel');
+  set('#favoritesCategoryLabel', 'category');
+  set('#categoryNameLabel', 'categoryName');
   set('#favoritesUrlInput', 'titlePlaceholder' /*unused below for url*/, 'placeholder'); // overridden next line
   const urlInput = document.getElementById('favoritesUrlInput');
   if (urlInput) urlInput.placeholder = 'https://...';
@@ -189,6 +326,8 @@ function applyStaticI18n() {
   set('#favoritesFormSubmit', 'add');
   set('.favorites-form-cancel', 'cancel');
   set('#favoritesFormDelete', 'remove');
+  set('#categoryFormSubmit', 'add');
+  set('#categoryModal .favorites-form-cancel', 'cancel');
   set('#favoritesEmpty', 'favoritesEmpty');
 
   // Open tabs section default title (overwritten by render when tabs exist)
@@ -418,25 +557,79 @@ async function closeTabOutDupes() {
    ]
    ---------------------------------------------------------------- */
 
-/* Favorite shape: { id, url, title, addedAt, slot, customLogo? }
+/* Favorite shape: { id, url, title, addedAt, categoryId, slot, customLogo? }
 
-   `slot` is an explicit grid index. New favorites are placed at the
-   first empty slot. Deleting a card leaves a gap so the rest don't
-   shift around. The visible column count can change with screen width;
-   cards just reflow into different (row, col) positions while keeping
-   their slot index. */
+   `slot` is an explicit grid index inside a category. A null categoryId
+   means the built-in Uncategorized group. */
+
+const UNCATEGORIZED_ID = null;
+const UNCATEGORIZED_DOM_ID = '__uncategorized__';
+
+function categoryIdToDom(value) {
+  return normalizedCategoryId(value) || UNCATEGORIZED_DOM_ID;
+}
+
+function categoryIdFromDom(value) {
+  return value === UNCATEGORIZED_DOM_ID ? UNCATEGORIZED_ID : normalizedCategoryId(value);
+}
+
+function normalizedCategoryId(value) {
+  return typeof value === 'string' && value ? value : UNCATEGORIZED_ID;
+}
+
+function sameCategory(a, b) {
+  return normalizedCategoryId(a) === normalizedCategoryId(b);
+}
+
+function makeStableId(prefix) {
+  if (crypto && typeof crypto.randomUUID === 'function') return `${prefix}-${crypto.randomUUID()}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 async function getFavorites() {
   const { favorites = [] } = await chrome.storage.local.get('favorites');
   return favorites
     .filter(f => f && f.type !== 'folder' && f.url)
-    .map(({ type, parentId, ...rest }) => rest);
+    .map(({ type, parentId, ...rest }) => ({
+      ...rest,
+      categoryId: normalizedCategoryId(rest.categoryId),
+    }));
 }
 
-async function addFavorite(url, title, customLogo = null) {
+async function getFavoriteCategories() {
+  const { favoriteCategories = [] } = await chrome.storage.local.get('favoriteCategories');
+  return favoriteCategories
+    .filter(c => c && typeof c.id === 'string' && c.id && typeof c.name === 'string')
+    .map((c, index) => ({
+      id: c.id,
+      name: c.name.trim(),
+      order: Number.isFinite(c.order) ? c.order : index,
+      collapsed: !!c.collapsed,
+    }))
+    .filter(c => c.name)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+}
+
+function firstFreeSlot(favorites, categoryId, excludeId = '') {
+  const taken = new Set(
+    favorites
+      .filter(f => f.id !== excludeId && sameCategory(f.categoryId, categoryId))
+      .map(f => f.slot)
+      .filter(s => Number.isInteger(s) && s >= 0)
+  );
+  let slot = 0;
+  while (taken.has(slot) && slot < SLOT_UPPER_BOUND) slot++;
+  return slot;
+}
+
+async function addFavorite(url, title, customLogo = null, categoryId = UNCATEGORIZED_ID) {
   if (!url) return false;
   const favorites = await getFavorites();
   if (favorites.some(f => f.url === url)) return false;
+  const categories = await getFavoriteCategories();
+  const normalizedId = categories.some(c => c.id === categoryId)
+    ? categoryId
+    : UNCATEGORIZED_ID;
 
   // Auto-derive a clean brand-style title (e.g. "Binance" from www.binance.com)
   // when no explicit title was passed.
@@ -449,17 +642,13 @@ async function addFavorite(url, title, customLogo = null) {
     catch { finalTitle = url; }
   }
 
-  // Place at the first empty slot — no hard cap.
-  const taken = new Set(favorites.map(f => f.slot));
-  let slot = 0;
-  while (taken.has(slot)) slot++;
-
   const fav = {
-    id:      Date.now().toString(),
+    id:      makeStableId('fav'),
     url,
     title:   finalTitle,
     addedAt: new Date().toISOString(),
-    slot,
+    categoryId: normalizedId,
+    slot: firstFreeSlot(favorites, normalizedId),
   };
   if (customLogo) fav.customLogo = customLogo;
   favorites.push(fav);
@@ -472,59 +661,199 @@ async function addFavorite(url, title, customLogo = null) {
  * swap their slots — gives users predictable "click-and-place" behaviour
  * during drag-and-drop reordering.
  */
-async function setFavoriteSlot(id, newSlot) {
+async function setFavoriteSlot(id, newSlot, categoryId = undefined) {
   if (!id || typeof newSlot !== 'number') return;
   if (newSlot < 0 || newSlot >= SLOT_UPPER_BOUND) return;
   const favorites = await getFavorites();
   const dragged = favorites.find(f => f.id === id);
   if (!dragged) return;
-  if (dragged.slot === newSlot) return;
-  const occupant = favorites.find(f => f.slot === newSlot);
-  if (occupant) occupant.slot = dragged.slot;
+  const targetCategoryId = categoryId === undefined
+    ? normalizedCategoryId(dragged.categoryId)
+    : normalizedCategoryId(categoryId);
+  const sameGroup = sameCategory(dragged.categoryId, targetCategoryId);
+  if (sameGroup && dragged.slot === newSlot) return;
+  const occupant = favorites.find(f =>
+    f.id !== id &&
+    sameCategory(f.categoryId, targetCategoryId) &&
+    f.slot === newSlot
+  );
+  const oldSlot = dragged.slot;
+  if (sameGroup && occupant) {
+    occupant.slot = oldSlot;
+  } else if (!sameGroup && occupant) {
+    // Insert inside the target group without sending another card back to
+    // the source category.
+    favorites
+      .filter(f => f.id !== id && sameCategory(f.categoryId, targetCategoryId) && f.slot >= newSlot)
+      .sort((a, b) => b.slot - a.slot)
+      .forEach((item) => {
+        if (item.slot + 1 < SLOT_UPPER_BOUND) item.slot += 1;
+      });
+  }
+  dragged.categoryId = targetCategoryId;
   dragged.slot = newSlot;
   await chrome.storage.local.set({ favorites });
 }
 
 /**
- * One-time migration:
- *  - Strip legacy folder entries / parentId / type fields.
- *  - Ensure every favorite has a non-negative slot. Slots that collide
- *    are reassigned to the first free slot. No upper bound — favorites
- *    are unlimited.
+ * Idempotent category migration:
+ *  - Existing URL favorites remain in Uncategorized with their slots intact.
+ *  - Legacy folder records, if present, become real categories instead of
+ *    being destructive migration input.
+ *  - Slots are validated independently inside every category.
  * Idempotent.
  */
-async function migrateAwayFromFolders() {
-  const { favorites: raw = [] } = await chrome.storage.local.get('favorites');
-  if (!raw.length) return;
-
+async function migrateFavoriteCategories() {
+  const stored = await chrome.storage.local.get(['favorites', 'favoriteCategories']);
+  const raw = Array.isArray(stored.favorites) ? stored.favorites : [];
+  const rawCategories = Array.isArray(stored.favoriteCategories)
+    ? stored.favoriteCategories
+    : [];
   const before = JSON.stringify(raw);
+  const categoriesBefore = JSON.stringify(rawCategories);
+  const categories = [];
+  const knownIds = new Set();
+
+  const addCategoryRecord = (candidate, index) => {
+    if (!candidate || typeof candidate.id !== 'string' || !candidate.id) return;
+    const name = String(candidate.name || candidate.title || '').trim();
+    if (!name || knownIds.has(candidate.id)) return;
+    knownIds.add(candidate.id);
+    categories.push({
+      id: candidate.id,
+      name,
+      order: Number.isFinite(candidate.order) ? candidate.order : index,
+      collapsed: !!candidate.collapsed,
+    });
+  };
+  rawCategories.forEach(addCategoryRecord);
+  raw.filter(f => f && f.type === 'folder').forEach((folder, index) => {
+    addCategoryRecord({
+      id: folder.id || makeStableId('category'),
+      name: folder.name || folder.title,
+      order: categories.length + index,
+    }, categories.length + index);
+  });
+  categories.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  categories.forEach((category, index) => { category.order = index; });
 
   const cleaned = raw
     .filter(f => f && f.type !== 'folder' && f.url)
-    .map(({ type, parentId, ...rest }) => rest);
+    .map(({ type, parentId, ...rest }) => {
+      const requested = rest.categoryId || parentId;
+      return {
+        ...rest,
+        categoryId: requested && knownIds.has(requested) ? requested : UNCATEGORIZED_ID,
+      };
+    });
 
-  // Keep entries with valid non-conflicting slots; everything else gets a fresh one.
-  const taken = new Set();
-  const needSlot = [];
-  for (const f of cleaned) {
-    const valid = typeof f.slot === 'number' && f.slot >= 0 && !taken.has(f.slot);
-    if (valid) taken.add(f.slot);
-    else       needSlot.push(f);
-  }
-
-  // Place the rest into vacant slots, in their original order.
-  let next = 0;
-  for (const f of needSlot) {
+  const takenByCategory = new Map();
+  for (const favorite of cleaned) {
+    const key = favorite.categoryId || '__uncategorized__';
+    if (!takenByCategory.has(key)) takenByCategory.set(key, new Set());
+    const taken = takenByCategory.get(key);
+    const valid = Number.isInteger(favorite.slot) &&
+      favorite.slot >= 0 &&
+      favorite.slot < SLOT_UPPER_BOUND &&
+      !taken.has(favorite.slot);
+    if (valid) {
+      taken.add(favorite.slot);
+      continue;
+    }
+    let next = 0;
     while (taken.has(next)) next++;
-    f.slot = next;
+    favorite.slot = next;
     taken.add(next);
   }
 
-  const final = cleaned;
-
-  if (JSON.stringify(final) !== before) {
-    await chrome.storage.local.set({ favorites: final });
+  const updates = {};
+  if (JSON.stringify(cleaned) !== before) updates.favorites = cleaned;
+  if (JSON.stringify(categories) !== categoriesBefore) {
+    updates.favoriteCategories = categories;
   }
+  if (Object.keys(updates).length) await chrome.storage.local.set(updates);
+}
+
+async function createCategory(name) {
+  const normalized = String(name || '').trim();
+  if (!normalized) return { ok: false, error: 'required' };
+  const categories = await getFavoriteCategories();
+  if (categories.some(c => c.name.localeCompare(normalized, undefined, { sensitivity: 'accent' }) === 0)) {
+    return { ok: false, error: 'duplicate' };
+  }
+  const category = {
+    id: makeStableId('category'),
+    name: normalized,
+    order: categories.length,
+    collapsed: false,
+  };
+  categories.push(category);
+  await chrome.storage.local.set({ favoriteCategories: categories });
+  return { ok: true, category };
+}
+
+async function renameCategory(id, name) {
+  const normalized = String(name || '').trim();
+  if (!normalized) return { ok: false, error: 'required' };
+  const categories = await getFavoriteCategories();
+  const category = categories.find(c => c.id === id);
+  if (!category) return { ok: false, error: 'missing' };
+  if (categories.some(c =>
+    c.id !== id &&
+    c.name.localeCompare(normalized, undefined, { sensitivity: 'accent' }) === 0
+  )) {
+    return { ok: false, error: 'duplicate' };
+  }
+  category.name = normalized;
+  await chrome.storage.local.set({ favoriteCategories: categories });
+  return { ok: true, category };
+}
+
+async function deleteCategory(id) {
+  const [categories, favorites] = await Promise.all([
+    getFavoriteCategories(),
+    getFavorites(),
+  ]);
+  const nextCategories = categories.filter(c => c.id !== id);
+  if (nextCategories.length === categories.length) return;
+  const moving = favorites
+    .filter(f => f.categoryId === id)
+    .sort((a, b) => a.slot - b.slot);
+  for (const favorite of moving) {
+    favorite.categoryId = UNCATEGORIZED_ID;
+    favorite.slot = firstFreeSlot(favorites, UNCATEGORIZED_ID, favorite.id);
+  }
+  nextCategories.forEach((category, index) => { category.order = index; });
+  await chrome.storage.local.set({
+    favoriteCategories: nextCategories,
+    favorites,
+  });
+}
+
+async function toggleCategoryCollapsed(id) {
+  if (!id) {
+    const { uncategorizedCollapsed = false } =
+      await chrome.storage.local.get('uncategorizedCollapsed');
+    await chrome.storage.local.set({ uncategorizedCollapsed: !uncategorizedCollapsed });
+    return;
+  }
+  const categories = await getFavoriteCategories();
+  const category = categories.find(c => c.id === id);
+  if (!category) return;
+  category.collapsed = !category.collapsed;
+  await chrome.storage.local.set({ favoriteCategories: categories });
+}
+
+async function reorderCategory(draggedId, targetId) {
+  if (!draggedId || !targetId || draggedId === targetId) return;
+  const categories = await getFavoriteCategories();
+  const from = categories.findIndex(c => c.id === draggedId);
+  const to = categories.findIndex(c => c.id === targetId);
+  if (from < 0 || to < 0) return;
+  const [moved] = categories.splice(from, 1);
+  categories.splice(to, 0, moved);
+  categories.forEach((category, index) => { category.order = index; });
+  await chrome.storage.local.set({ favoriteCategories: categories });
 }
 
 /**
@@ -537,9 +866,22 @@ async function updateFavorite(id, fields) {
   const favorites = await getFavorites();
   const fav = favorites.find(f => f.id === id);
   if (!fav) return;
+  const oldUrl = fav.url;
+  const oldCategoryId = normalizedCategoryId(fav.categoryId);
   for (const [k, v] of Object.entries(fields)) {
     if (k === 'customLogo' && v === null) delete fav.customLogo;
     else fav[k] = v;
+  }
+  fav.categoryId = normalizedCategoryId(fav.categoryId);
+  if (!sameCategory(oldCategoryId, fav.categoryId)) {
+    fav.slot = firstFreeSlot(favorites, fav.categoryId, fav.id);
+  }
+  if (fields.url && fields.url !== oldUrl && !fav.customLogo) {
+    delete fav.iconUrl;
+    delete fav.iconVersion;
+    delete fav.iconWidth;
+    delete fav.iconHeight;
+    delete fav.iconSource;
   }
   await chrome.storage.local.set({ favorites });
 }
@@ -1023,60 +1365,24 @@ document.addEventListener('error', (e) => {
 }, true);
 
 /* ----------------------------------------------------------------
-   ICON RESOLUTION CACHE — once an image loads successfully, persist
-   the URL that worked into the favorite's `iconUrl` field. Future
-   renders skip the fallback chain entirely.
+   HIGH-RES ICON RESOLVER
+
+   Version 2 inspects the page's icon declarations and web manifest,
+   verifies real dimensions, then stores a normalized 128×128 WebP.
+   Existing customLogo values are never touched.
    ---------------------------------------------------------------- */
-let _pendingIconWrites = new Map();   // favId → resolved url
-let _iconWriteTimer    = null;
-let _suppressFavReRender = false;     // set briefly so onChanged skips us
+const ICON_CACHE_VERSION = 2;
+const ICON_TARGET_SIZE = 128;
+const MAX_ICON_DOWNLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_ICON_DATA_URL_CHARS = 96 * 1024;
+const MAX_ICON_CANDIDATES = 14;
+const ICON_RESOLVE_CONCURRENCY = 2;
 
-async function flushIconWrites() {
-  _iconWriteTimer = null;
-  const writes = _pendingIconWrites;
-  if (writes.size === 0) return;
-  _pendingIconWrites = new Map();
-  const { favorites = [] } = await chrome.storage.local.get('favorites');
-  let modified = false;
-  for (const [favId, url] of writes) {
-    const fav = favorites.find(f => f.id === favId);
-    if (fav && fav.iconUrl !== url) {
-      fav.iconUrl = url;
-      modified = true;
-    }
-  }
-  if (!modified) return;
-  _suppressFavReRender = true;
-  await chrome.storage.local.set({ favorites });
-  setTimeout(() => { _suppressFavReRender = false; }, 200);
-}
-
-function queueIconWrite(favId, url) {
-  if (!favId || !url) return;
-  _pendingIconWrites.set(favId, url);
-  if (_iconWriteTimer) clearTimeout(_iconWriteTimer);
-  _iconWriteTimer = setTimeout(flushIconWrites, 500);
-}
-
-// Capture phase — `load` doesn't bubble for individual images.
-document.addEventListener('load', (e) => {
-  const img = e.target;
-  if (!(img instanceof HTMLImageElement)) return;
-  if (!img.classList.contains('favorite-favicon')) return;
-  const favId = img.dataset.favId;
-  if (!favId) return;
-  if (img.dataset.resolved === '1') return;   // already cached
-  const finalUrl = img.currentSrc || img.src;
-  if (!finalUrl) return;
-  // Don't re-cache an already-stored data URL.
-  if (finalUrl.startsWith('data:')) return;
-  img.dataset.resolved = '1';
-  // Download the image bytes and persist as a base64 data URL — zero
-  // network on subsequent renders.
-  downloadAndCacheIcon(favId, finalUrl);
-}, true);
-
-const MAX_ICON_BYTES = 200 * 1024;   // hard cap to keep storage reasonable
+const _iconResolveQueue = [];
+const _queuedIconIds = new Set();
+const _iconResolveInFlight = new Set();
+const _iconResolvePromises = new Map();
+let _activeIconResolves = 0;
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -1087,18 +1393,259 @@ function blobToDataUrl(blob) {
   });
 }
 
-async function downloadAndCacheIcon(favId, url) {
+function parseDeclaredIconSize(sizes) {
+  if (!sizes) return 0;
+  if (String(sizes).toLowerCase().includes('any')) return 1024;
+  return String(sizes)
+    .split(/\s+/)
+    .map(size => size.match(/^(\d+)x(\d+)$/i))
+    .filter(Boolean)
+    .reduce((max, match) => Math.max(max, Number(match[1]), Number(match[2])), 0);
+}
+
+function addIconCandidate(list, seen, url, source, declaredSize = 0) {
+  if (!url) return;
   try {
-    const r = await fetch(url, { credentials: 'omit' });
-    if (!r.ok) return;
-    const blob = await r.blob();
-    if (blob.size === 0 || blob.size > MAX_ICON_BYTES) return;
-    const dataUrl = await blobToDataUrl(blob);
-    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return;
-    queueIconWrite(favId, dataUrl);
+    const normalized = new URL(url).href;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    list.push({ url: normalized, source, declaredSize });
+  } catch {}
+}
+
+async function collectIconCandidates(pageUrl) {
+  const candidates = [];
+  const seen = new Set();
+  let page;
+  try { page = new URL(pageUrl); } catch { return candidates; }
+
+  try {
+    const response = await fetch(page.href, {
+      credentials: 'omit',
+      redirect: 'follow',
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    });
+    const contentLength = Number(response.headers.get('content-length') || 0);
+    const contentType = response.headers.get('content-type') || '';
+    if (response.ok &&
+        (!contentLength || contentLength <= 1024 * 1024) &&
+        /html|xhtml/i.test(contentType)) {
+      const baseUrl = response.url || page.href;
+      const documentText = await response.text();
+      const doc = new DOMParser().parseFromString(documentText, 'text/html');
+      for (const link of doc.querySelectorAll('link[rel][href]')) {
+        const rel = String(link.getAttribute('rel') || '').toLowerCase().split(/\s+/);
+        if (!rel.some(value => value === 'icon' || value === 'apple-touch-icon' ||
+          value === 'apple-touch-icon-precomposed' || value === 'shortcut')) continue;
+        let href;
+        try { href = new URL(link.getAttribute('href'), baseUrl).href; } catch { continue; }
+        const source = rel.some(value => value.startsWith('apple-touch-icon'))
+          ? 'apple-touch-icon'
+          : 'page-icon';
+        addIconCandidate(
+          candidates,
+          seen,
+          href,
+          source,
+          parseDeclaredIconSize(link.getAttribute('sizes'))
+        );
+      }
+
+      const manifestLink = doc.querySelector('link[rel~="manifest"][href]');
+      if (manifestLink) {
+        try {
+          const manifestUrl = new URL(manifestLink.getAttribute('href'), baseUrl).href;
+          const manifestResponse = await fetch(manifestUrl, { credentials: 'omit' });
+          if (manifestResponse.ok) {
+            const manifest = await manifestResponse.json();
+            for (const icon of Array.isArray(manifest.icons) ? manifest.icons : []) {
+              let href;
+              try { href = new URL(icon.src, manifestUrl).href; } catch { continue; }
+              addIconCandidate(
+                candidates,
+                seen,
+                href,
+                'web-manifest',
+                parseDeclaredIconSize(icon.sizes)
+              );
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  addIconCandidate(candidates, seen, `${page.origin}/apple-touch-icon.png`, 'apple-touch-icon', 180);
+  addIconCandidate(candidates, seen, `${page.origin}/apple-touch-icon-precomposed.png`, 'apple-touch-icon', 180);
+  addIconCandidate(candidates, seen, `${page.origin}/favicon.ico`, 'favicon-ico', 64);
+  addIconCandidate(candidates, seen, getFaviconUrl(page.href, ICON_TARGET_SIZE), 'chrome-favicon', ICON_TARGET_SIZE);
+
+  const sourceRank = {
+    'web-manifest': 4,
+    'apple-touch-icon': 3,
+    'page-icon': 2,
+    'favicon-ico': 1,
+    'chrome-favicon': 0,
+  };
+  return candidates
+    .sort((a, b) =>
+      b.declaredSize - a.declaredSize ||
+      (sourceRank[b.source] || 0) - (sourceRank[a.source] || 0)
+    )
+    .slice(0, MAX_ICON_CANDIDATES);
+}
+
+async function fetchIconCandidate(candidate) {
+  try {
+    const response = await fetch(candidate.url, { credentials: 'omit', redirect: 'follow' });
+    if (!response.ok) return null;
+    const length = Number(response.headers.get('content-length') || 0);
+    if (length > MAX_ICON_DOWNLOAD_BYTES) return null;
+    let blob = await response.blob();
+    if (!blob.size || blob.size > MAX_ICON_DOWNLOAD_BYTES) return null;
+    if (/svg/i.test(blob.type) || /\.svg(?:$|[?#])/i.test(candidate.url)) {
+      const svgText = await blob.text();
+      const openingTag = svgText.match(/<svg\b[^>]*>/i);
+      if (openingTag && !/\bwidth\s*=/i.test(openingTag[0])) {
+        const viewBoxAttr = openingTag[0].match(/\bviewBox\s*=\s*["']([^"']+)["']/i);
+        const viewBoxValues = viewBoxAttr
+          ? viewBoxAttr[1].trim().split(/[\s,]+/).map(Number)
+          : [];
+        const viewWidth = viewBoxValues.length === 4 && viewBoxValues[2] > 0
+          ? viewBoxValues[2]
+          : ICON_TARGET_SIZE;
+        const viewHeight = viewBoxValues.length === 4 && viewBoxValues[3] > 0
+          ? viewBoxValues[3]
+          : ICON_TARGET_SIZE;
+        const ratio = Math.max(viewWidth, viewHeight) / 512;
+        const width = Math.max(1, Math.round(viewWidth / ratio));
+        const height = Math.max(1, Math.round(viewHeight / ratio));
+        const sizedSvg = svgText.replace(/<svg\b/i, `<svg width="${width}" height="${height}"`);
+        blob = new Blob([sizedSvg], { type: 'image/svg+xml' });
+      }
+    }
+    const bitmap = await createImageBitmap(blob);
+    const width = bitmap.width;
+    const height = bitmap.height;
+    if (!width || !height) {
+      bitmap.close();
+      return null;
+    }
+    return { ...candidate, blob, bitmap, width, height };
   } catch {
-    // Fetch failed (network, blocked, etc.) — leave iconUrl unset; we'll
-    // try again next render via the fallback chain.
+    return null;
+  }
+}
+
+async function normalizeResolvedIcon(resolved) {
+  const canvas = document.createElement('canvas');
+  canvas.width = ICON_TARGET_SIZE;
+  canvas.height = ICON_TARGET_SIZE;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  ctx.clearRect(0, 0, ICON_TARGET_SIZE, ICON_TARGET_SIZE);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const scale = Math.min(
+    ICON_TARGET_SIZE / resolved.width,
+    ICON_TARGET_SIZE / resolved.height
+  );
+  const width = Math.max(1, Math.round(resolved.width * scale));
+  const height = Math.max(1, Math.round(resolved.height * scale));
+  const x = Math.round((ICON_TARGET_SIZE - width) / 2);
+  const y = Math.round((ICON_TARGET_SIZE - height) / 2);
+  ctx.drawImage(resolved.bitmap, x, y, width, height);
+  resolved.bitmap.close();
+  const output = await new Promise(resolve =>
+    canvas.toBlob(resolve, 'image/webp', 0.92)
+  );
+  if (!output) return '';
+  const dataUrl = await blobToDataUrl(output);
+  return dataUrl.length <= MAX_ICON_DATA_URL_CHARS ? dataUrl : '';
+}
+
+async function resolveAndCacheFavoriteIcon(favId) {
+  const favorites = await getFavorites();
+  const favorite = favorites.find(f => f.id === favId);
+  if (!favorite || favorite.customLogo) return false;
+
+  const candidates = await collectIconCandidates(favorite.url);
+  let best = null;
+  for (const candidate of candidates) {
+    const resolved = await fetchIconCandidate(candidate);
+    if (!resolved) continue;
+    const pixels = Math.min(resolved.width, resolved.height);
+    const bestPixels = best ? Math.min(best.width, best.height) : -1;
+    if (!best || pixels > bestPixels) {
+      if (best && best.bitmap) best.bitmap.close();
+      best = resolved;
+    } else {
+      resolved.bitmap.close();
+    }
+    if (best && Math.min(best.width, best.height) >= 512) break;
+  }
+
+  let dataUrl = '';
+  if (best) dataUrl = await normalizeResolvedIcon(best);
+  const latest = await getFavorites();
+  const latestFavorite = latest.find(f => f.id === favId);
+  if (!latestFavorite || latestFavorite.customLogo) return false;
+  if (dataUrl) {
+    latestFavorite.iconUrl = dataUrl;
+    latestFavorite.iconWidth = best.width;
+    latestFavorite.iconHeight = best.height;
+    latestFavorite.iconSource = best.source;
+  }
+  latestFavorite.iconVersion = ICON_CACHE_VERSION;
+  latestFavorite.iconCheckedAt = new Date().toISOString();
+  await chrome.storage.local.set({ favorites: latest });
+  return !!dataUrl;
+}
+
+function drainIconResolveQueue() {
+  while (_activeIconResolves < ICON_RESOLVE_CONCURRENCY && _iconResolveQueue.length) {
+    const favId = _iconResolveQueue.shift();
+    _queuedIconIds.delete(favId);
+    _activeIconResolves++;
+    _iconResolveInFlight.add(favId);
+    const task = resolveAndCacheFavoriteIcon(favId)
+      .catch(err => console.warn('[wolfy] icon resolution failed:', err))
+      .finally(() => {
+        _iconResolvePromises.delete(favId);
+        _iconResolveInFlight.delete(favId);
+        _activeIconResolves--;
+        drainIconResolveQueue();
+      });
+    _iconResolvePromises.set(favId, task);
+  }
+}
+
+function scheduleFavoriteIconResolution(favId) {
+  if (!favId || _queuedIconIds.has(favId) || _iconResolveInFlight.has(favId)) return;
+  _queuedIconIds.add(favId);
+  _iconResolveQueue.push(favId);
+  drainIconResolveQueue();
+}
+
+async function refreshFavoriteIcon(favId) {
+  if (_iconResolvePromises.has(favId)) {
+    return !!(await _iconResolvePromises.get(favId));
+  }
+  if (_queuedIconIds.has(favId)) {
+    _queuedIconIds.delete(favId);
+    const index = _iconResolveQueue.indexOf(favId);
+    if (index >= 0) _iconResolveQueue.splice(index, 1);
+  }
+  _iconResolveInFlight.add(favId);
+  const task = resolveAndCacheFavoriteIcon(favId);
+  _iconResolvePromises.set(favId, task);
+  try {
+    return await task;
+  } catch (err) {
+    console.warn('[wolfy] manual icon refresh failed:', err);
+    return false;
+  } finally {
+    _iconResolvePromises.delete(favId);
+    _iconResolveInFlight.delete(favId);
   }
 }
 
@@ -1309,73 +1856,142 @@ function renderDomainCard(group, favoritedUrls = new Set()) {
    ---------------------------------------------------------------- */
 
 async function renderFavoritesColumn() {
+  if (window.TabHomeSources) return window.TabHomeSources.render();
   const list  = document.getElementById('favoritesList');
   const empty = document.getElementById('favoritesEmpty');
   if (!list || !empty) return;
 
   try {
-    const items = await getFavorites();
-    if (items.length === 0) {
+    const [items, categories, uncategorizedState] = await Promise.all([
+      getFavorites(),
+      getFavoriteCategories(),
+      chrome.storage.local.get('uncategorizedCollapsed'),
+    ]);
+    if (items.length === 0 && categories.length === 0) {
       list.innerHTML = '';
       empty.style.display = 'block';
       return;
     }
     empty.style.display = 'none';
 
-    // Render slots from 0 up to maxSlot + a trailing buffer of empty cells
-    // (so users always have somewhere to drop when reordering near the end).
-    const bySlot = new Map();
-    let maxSlot = -1;
-    for (const it of items) {
-      const s = it.slot ?? 0;
-      bySlot.set(s, it);
-      if (s > maxSlot) maxSlot = s;
+    const groups = categories.map(category => ({
+      ...category,
+      items: items.filter(item => item.categoryId === category.id),
+      builtIn: false,
+    }));
+    groups.push({
+      id: UNCATEGORIZED_ID,
+      name: t('uncategorized'),
+      order: Number.MAX_SAFE_INTEGER,
+      collapsed: !!uncategorizedState.uncategorizedCollapsed,
+      items: items.filter(item => !item.categoryId),
+      builtIn: true,
+    });
+    list.innerHTML = groups.map(renderFavoriteCategory).join('');
+    for (const item of items) {
+      if (!item.customLogo && item.iconVersion !== ICON_CACHE_VERSION) {
+        scheduleFavoriteIconResolution(item.id);
+      }
     }
-    const TRAILING_EMPTY_BUFFER = 9;   // ~one extra row of drop targets
-    const totalSlots = maxSlot + 1 + TRAILING_EMPTY_BUFFER;
-
-    let html = '';
-    for (let i = 0; i < totalSlots; i++) {
-      const item = bySlot.get(i);
-      html += item
-        ? renderFavoriteItem(item)
-        : `<div class="favorite-slot-empty" data-slot="${i}"></div>`;
-    }
-    list.innerHTML = html;
   } catch (err) {
     console.warn('[wolfy] Could not load favorites:', err);
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderFavoriteCategory(category) {
+  const domId = categoryIdToDom(category.id);
+  const safeDomId = escapeHtml(domId);
+  const safeName = escapeHtml(category.name);
+  const items = Array.isArray(category.items) ? category.items : [];
+  const bySlot = new Map();
+  let maxSlot = -1;
+  for (const item of items) {
+    const slot = Number.isInteger(item.slot) && item.slot >= 0 ? item.slot : 0;
+    bySlot.set(slot, item);
+    if (slot > maxSlot) maxSlot = slot;
+  }
+
+  const totalSlots = Math.max(0, maxSlot + 1);
+  let gridHtml = '';
+  for (let slot = 0; slot < totalSlots; slot++) {
+    const item = bySlot.get(slot);
+    gridHtml += item
+      ? renderFavoriteItem(item)
+      : `<div class="favorite-slot-empty" data-slot="${slot}" data-category-id="${safeDomId}"></div>`;
+  }
+  if (items.length === 0) {
+    gridHtml = `<div class="favorite-slot-empty favorite-slot-empty-compact"
+                     data-slot="0" data-category-id="${safeDomId}"
+                     data-source="custom" data-target-id="${safeDomId}">${escapeHtml(t('sourceCustomEmpty'))}</div>`;
+  }
+
+  const categoryMenu = category.builtIn ? '' : `
+    <button class="category-menu-btn" type="button" data-action="category-menu"
+            data-category-id="${safeDomId}" title="${escapeHtml(t('moreActions'))}"
+            aria-label="${escapeHtml(t('moreActions'))}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    </button>`;
+  const draggable = category.builtIn
+    ? ''
+    : `draggable="true" data-category-drag-id="${safeDomId}"`;
+
+  return `
+    <section class="favorite-category${category.collapsed ? ' collapsed' : ''}"
+             data-category-id="${safeDomId}" data-source="custom" data-target-id="${safeDomId}">
+      <div class="favorite-category-header" data-source="custom" data-target-id="${safeDomId}" ${draggable}>
+        <button class="category-collapse-btn" type="button"
+                data-action="toggle-category" data-category-id="${safeDomId}"
+                aria-expanded="${String(!category.collapsed)}"
+                aria-label="${escapeHtml(category.collapsed ? t('expandCategory') : t('collapseCategory'))}">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 9.75 3.75 3.75 3.75-3.75"/></svg>
+        </button>
+        <h3>${safeName}</h3>
+        <span class="favorite-category-count">${items.length}</span>
+        <div class="section-line"></div>
+        ${categoryMenu}
+      </div>
+      <div class="favorites-list" data-category-id="${safeDomId}"
+           style="${category.collapsed ? 'display:none' : ''}">
+        ${gridHtml}
+      </div>
+    </section>`;
+}
+
 function renderFavoriteItem(fav) {
-  const safeUrl   = (fav.url || '').replace(/"/g, '&quot;');
-  const safeTitle = (fav.title || fav.url || '').replace(/"/g, '&quot;');
+  const safeUrl   = escapeHtml(fav.url || '');
+  const safeTitle = escapeHtml(fav.title || fav.url || '');
 
   let imgHtml = '';
   if (fav.customLogo) {
-    imgHtml = `<img class="favorite-favicon" src="${fav.customLogo}" alt="">`;
+    imgHtml = `<img class="favorite-favicon" src="${escapeHtml(fav.customLogo)}" alt="">`;
   } else if (fav.iconUrl) {
-    // Already resolved. Data URLs are real binary caches — mark resolved so
-    // we never re-download. Plain URL strings (legacy) get rendered but left
-    // unresolved, so the load handler downloads + upgrades to a data URL.
-    const safe       = fav.iconUrl.replace(/"/g, '&quot;');
-    const isBinary   = fav.iconUrl.startsWith('data:');
-    const resolved   = isBinary ? 'data-resolved="1"' : '';
-    imgHtml = `<img class="favorite-favicon" src="${safe}" data-fav-id="${fav.id}" ${resolved} alt="">`;
+    const safe = escapeHtml(fav.iconUrl);
+    imgHtml = `<img class="favorite-favicon" src="${safe}" data-fav-id="${escapeHtml(fav.id)}" alt="">`;
   } else {
     const chain = getFaviconFallbackChain(fav.url, 128);
     if (chain.length > 0) {
-      const primary  = chain[0].replace(/"/g, '&quot;');
-      const fallback = chain.slice(1).join('|').replace(/"/g, '&quot;');
-      imgHtml = `<img class="favorite-favicon" src="${primary}" data-fallback="${fallback}" data-fav-id="${fav.id}" alt="">`;
+      const primary  = escapeHtml(chain[0]);
+      const fallback = escapeHtml(chain.slice(1).join('|'));
+      imgHtml = `<img class="favorite-favicon" src="${primary}" data-fallback="${fallback}" data-fav-id="${escapeHtml(fav.id)}" alt="">`;
     }
   }
 
   return `
-    <a class="favorite-item" href="${safeUrl}" draggable="true" data-fav-id="${fav.id}" title="${safeUrl}">
+    <a class="favorite-item" href="${safeUrl}" draggable="true"
+       data-source="custom" data-item-id="${escapeHtml(fav.id)}"
+       data-fav-id="${escapeHtml(fav.id)}" title="${safeUrl}">
       ${imgHtml}
       <span class="favorite-title">${safeTitle}</span>
-      <button class="favorite-menu" data-action="favorite-menu" data-fav-id="${fav.id}" title="${t('moreActions')}">
+      <button class="favorite-menu" data-action="favorite-menu" data-fav-id="${escapeHtml(fav.id)}" title="${escapeHtml(t('moreActions'))}">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
       </button>
     </a>`;
@@ -1604,6 +2220,8 @@ document.addEventListener('click', async (e) => {
   if (!actionEl) return;
 
   const action = actionEl.dataset.action;
+  if (window.TabHomeSources &&
+      await window.TabHomeSources.handleAction(action, e, actionEl)) return;
 
   // ---- Close duplicate tab-out tabs ----
   if (action === 'close-tabout-dupes') {
@@ -1627,9 +2245,66 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // ---- Theme toggle (light / dark) ----
-  if (action === 'toggle-theme') {
-    await toggleTheme();
+  // ---- Theme menu (system / light / dark) ----
+  if (action === 'toggle-theme-menu') {
+    toggleThemeMenu();
+    return;
+  }
+  if (action === 'set-theme') {
+    await setThemeMode(actionEl.dataset.themeMode);
+    closeThemeMenu({ restoreFocus: true });
+    return;
+  }
+
+  // ---- Favorite categories ----
+  if (action === 'add-category') {
+    closeThemeMenu();
+    await openCategoryForm();
+    return;
+  }
+  if (action === 'cancel-category-form') {
+    closeCategoryModal();
+    return;
+  }
+  if (action === 'toggle-category') {
+    const categoryId = categoryIdFromDom(actionEl.dataset.categoryId);
+    await toggleCategoryCollapsed(categoryId);
+    await renderFavoritesColumn();
+    return;
+  }
+  if (action === 'category-menu') {
+    e.stopPropagation();
+    const categoryId = categoryIdFromDom(actionEl.dataset.categoryId);
+    if (!categoryId) return;
+    const existing = document.getElementById('categoryPopupMenu');
+    if (existing && existing.dataset.categoryId === categoryId) {
+      closeCategoryMenu();
+    } else {
+      closeCategoryMenu();
+      openCategoryMenu(actionEl, categoryId);
+    }
+    return;
+  }
+  if (action === 'rename-category') {
+    const categoryId = actionEl.dataset.categoryId;
+    closeCategoryMenu();
+    await openCategoryForm(categoryId);
+    return;
+  }
+  if (action === 'delete-category') {
+    const categoryId = actionEl.dataset.categoryId;
+    closeCategoryMenu();
+    const categories = await getFavoriteCategories();
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+    const ok = await showConfirm({
+      message: t('confirmDeleteCategory', category.name),
+      okLabel: t('remove'),
+    });
+    if (!ok) return;
+    await deleteCategory(categoryId);
+    await renderFavoritesColumn();
+    showToast(t('categoryDeleted'));
     return;
   }
 
@@ -1645,6 +2320,7 @@ document.addEventListener('click', async (e) => {
       if (btn) btn.classList.remove('open');
     } else {
       resetFavoriteForm();
+      await populateCategorySelect(UNCATEGORIZED_ID);
       modal.style.display = 'flex';
       if (btn) btn.classList.add('open');
       const urlInput = document.getElementById('favoritesUrlInput');
@@ -1703,6 +2379,16 @@ document.addEventListener('click', async (e) => {
     const id = actionEl.dataset.favId;
     closeFavoriteMenu();
     if (id) await openEditFavorite(id);
+    return;
+  }
+  if (action === 'menu-refresh-icon') {
+    const id = actionEl.dataset.favId;
+    closeFavoriteMenu();
+    if (!id) return;
+    showToast(t('iconRefreshing'));
+    const refreshed = await refreshFavoriteIcon(id);
+    await renderFavoritesColumn();
+    showToast(t(refreshed ? 'iconRefreshed' : 'iconRefreshFailed'));
     return;
   }
   if (action === 'menu-remove-favorite') {
@@ -1979,6 +2665,27 @@ function setLogoPreviewForUrl(pageUrl, customLogo = null) {
   setLogoPreview(chain[0], chain.slice(1));
 }
 
+async function populateCategorySelect(selectedId = UNCATEGORIZED_ID) {
+  const select = document.getElementById('favoritesCategorySelect');
+  if (!select) return;
+  const categories = await getFavoriteCategories();
+  select.innerHTML = '';
+  for (const category of categories) {
+    const option = document.createElement('option');
+    option.value = category.id;
+    option.textContent = category.name;
+    select.appendChild(option);
+  }
+  const uncategorized = document.createElement('option');
+  uncategorized.value = UNCATEGORIZED_DOM_ID;
+  uncategorized.textContent = t('uncategorized');
+  select.appendChild(uncategorized);
+  const value = categoryIdToDom(selectedId);
+  select.value = Array.from(select.options).some(option => option.value === value)
+    ? value
+    : UNCATEGORIZED_DOM_ID;
+}
+
 function resetFavoriteForm() {
   const form = document.getElementById('favoritesForm');
   if (!form) return;
@@ -1986,7 +2693,9 @@ function resetFavoriteForm() {
   document.getElementById('favoritesUrlInput').value   = '';
   document.getElementById('favoritesTitleInput').value = '';
   document.getElementById('favoritesLogoInput').value  = '';
-  document.getElementById('favoritesFormSubmit').textContent = 'Add';
+  const categorySelect = document.getElementById('favoritesCategorySelect');
+  if (categorySelect) categorySelect.value = UNCATEGORIZED_DOM_ID;
+  document.getElementById('favoritesFormSubmit').textContent = t('add');
   const delBtn = document.getElementById('favoritesFormDelete');
   if (delBtn) delBtn.style.display = 'none';
   setLogoPreview('');
@@ -2054,6 +2763,7 @@ async function openEditFavorite(id) {
   if (!fav) return;
   document.getElementById('favoritesUrlInput').value   = fav.url || '';
   document.getElementById('favoritesTitleInput').value = fav.title || '';
+  await populateCategorySelect(fav.categoryId);
   setLogoPreviewForUrl(fav.url, fav.customLogo);
   pendingLogoDataUrl = null;
   clearCustomLogo    = false;
@@ -2062,7 +2772,7 @@ async function openEditFavorite(id) {
   form.dataset.editingId = id;
   if (modal) modal.style.display = 'flex';
   document.getElementById('favoritesAddToggle').classList.add('open');
-  document.getElementById('favoritesFormSubmit').textContent = 'Save';
+  document.getElementById('favoritesFormSubmit').textContent = t('save');
   const delBtn = document.getElementById('favoritesFormDelete');
   if (delBtn) delBtn.style.display = 'inline-flex';
 }
@@ -2074,6 +2784,7 @@ function openFavoriteMenu(anchorEl, favId) {
   menu.dataset.favId = favId;
   menu.innerHTML = `
     <button class="favorite-popup-item" data-action="menu-edit-favorite"   data-fav-id="${favId}">${t('edit')}</button>
+    <button class="favorite-popup-item" data-action="menu-refresh-icon" data-fav-id="${favId}">${t('refreshIcon')}</button>
     <button class="favorite-popup-item favorite-popup-item-danger" data-action="menu-remove-favorite" data-fav-id="${favId}">${t('remove')}</button>
   `;
   document.body.appendChild(menu);
@@ -2087,10 +2798,73 @@ function openFavoriteMenu(anchorEl, favId) {
   if (left < 4) left = 4;
   menu.style.top  = `${top}px`;
   menu.style.left = `${left}px`;
+  const first = menu.querySelector('button');
+  if (first) setTimeout(() => first.focus(), 0);
 }
 
 function closeFavoriteMenu() {
   const menu = document.getElementById('favoritePopupMenu');
+  if (menu) menu.remove();
+}
+
+async function openCategoryForm(categoryId = '') {
+  const modal = document.getElementById('categoryModal');
+  const form = document.getElementById('categoryForm');
+  const input = document.getElementById('categoryNameInput');
+  const submit = document.getElementById('categoryFormSubmit');
+  const error = document.getElementById('categoryFormError');
+  if (!modal || !form || !input || !submit || !error) return;
+  let name = '';
+  if (categoryId) {
+    const categories = await getFavoriteCategories();
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+    name = category.name;
+  }
+  form.dataset.editingCategoryId = categoryId;
+  input.value = name;
+  error.textContent = '';
+  submit.textContent = categoryId ? t('save') : t('add');
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    input.focus();
+    if (categoryId) input.select();
+  }, 0);
+}
+
+function closeCategoryModal() {
+  const modal = document.getElementById('categoryModal');
+  const form = document.getElementById('categoryForm');
+  const error = document.getElementById('categoryFormError');
+  if (modal) modal.style.display = 'none';
+  if (form) form.dataset.editingCategoryId = '';
+  if (error) error.textContent = '';
+}
+
+function openCategoryMenu(anchorEl, categoryId) {
+  const menu = document.createElement('div');
+  menu.id = 'categoryPopupMenu';
+  menu.className = 'favorite-popup-menu';
+  menu.dataset.categoryId = categoryId;
+  menu.innerHTML = `
+    <button class="favorite-popup-item" data-action="rename-category" data-category-id="${escapeHtml(categoryId)}">${t('renameCategory')}</button>
+    <button class="favorite-popup-item favorite-popup-item-danger" data-action="delete-category" data-category-id="${escapeHtml(categoryId)}">${t('deleteCategory')}</button>
+  `;
+  document.body.appendChild(menu);
+  const anchor = anchorEl.getBoundingClientRect();
+  const bounds = menu.getBoundingClientRect();
+  let top = anchor.bottom + 4;
+  let left = anchor.right - bounds.width;
+  if (top + bounds.height > window.innerHeight - 4) top = anchor.top - bounds.height - 4;
+  if (left < 4) left = 4;
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+  const first = menu.querySelector('button');
+  if (first) setTimeout(() => first.focus(), 0);
+}
+
+function closeCategoryMenu() {
+  const menu = document.getElementById('categoryPopupMenu');
   if (menu) menu.remove();
 }
 
@@ -2102,11 +2876,60 @@ document.addEventListener('click', (e) => {
   closeFavoriteMenu();
 });
 
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'favoritesModal') closeFavoriteModal();
+  if (e.target.id === 'categoryModal') closeCategoryModal();
+  if (document.getElementById('categoryPopupMenu') &&
+      !e.target.closest('#categoryPopupMenu') &&
+      !e.target.closest('[data-action="category-menu"]')) {
+    closeCategoryMenu();
+  }
+  const themeMenu = document.getElementById('themeMenu');
+  if (themeMenu && themeMenu.style.display !== 'none' &&
+      !e.target.closest('.theme-control')) {
+    closeThemeMenu();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  const menu = e.target.closest('#themeMenu, #favoritePopupMenu, #categoryPopupMenu');
+  if (!menu) return;
+  if (e.key === 'Tab') {
+    if (menu.id === 'themeMenu') closeThemeMenu();
+    if (menu.id === 'favoritePopupMenu') closeFavoriteMenu();
+    if (menu.id === 'categoryPopupMenu') closeCategoryMenu();
+    return;
+  }
+  const items = Array.from(menu.querySelectorAll('button:not([disabled])'));
+  if (!items.length) return;
+  const index = Math.max(0, items.indexOf(document.activeElement));
+  let next = null;
+  if (e.key === 'ArrowDown') next = items[(index + 1) % items.length];
+  if (e.key === 'ArrowUp') next = items[(index - 1 + items.length) % items.length];
+  if (e.key === 'Home') next = items[0];
+  if (e.key === 'End') next = items[items.length - 1];
+  if (next) {
+    e.preventDefault();
+    next.focus();
+  }
+});
+
 // Escape closes whichever overlay is open.
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  const themeMenu = document.getElementById('themeMenu');
+  if (themeMenu && themeMenu.style.display !== 'none') {
+    closeThemeMenu({ restoreFocus: true });
+    return;
+  }
+  const categoryModal = document.getElementById('categoryModal');
+  if (categoryModal && categoryModal.style.display !== 'none') {
+    closeCategoryModal();
+    return;
+  }
   const modal = document.getElementById('favoritesModal');
   if (modal && modal.style.display !== 'none') { closeFavoriteModal(); return; }
+  closeCategoryMenu();
   closeFavoriteMenu();
 });
 
@@ -2204,6 +3027,31 @@ document.addEventListener('input', (e) => {
   setLogoPreviewForUrl(url);
 });
 
+document.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'categoryForm') return;
+  e.preventDefault();
+  const form = e.target;
+  const input = document.getElementById('categoryNameInput');
+  const error = document.getElementById('categoryFormError');
+  const editingId = form.dataset.editingCategoryId || '';
+  const name = input ? input.value : '';
+  const result = editingId
+    ? await renameCategory(editingId, name)
+    : await createCategory(name);
+  if (!result.ok) {
+    if (error) {
+      error.textContent = result.error === 'duplicate'
+        ? t('categoryDuplicate')
+        : t('categoryRequired');
+    }
+    if (input) input.focus();
+    return;
+  }
+  closeCategoryModal();
+  await renderFavoritesColumn();
+  showToast(t(editingId ? 'categoryRenamed' : 'categoryAdded'));
+});
+
 // ---- Favorites form submission (handles both add and edit) ----
 document.addEventListener('submit', async (e) => {
   if (e.target.id !== 'favoritesForm') return;
@@ -2213,6 +3061,8 @@ document.addEventListener('submit', async (e) => {
   const editingId  = form.dataset.editingId || '';
   const urlInput   = document.getElementById('favoritesUrlInput');
   const titleInput = document.getElementById('favoritesTitleInput');
+  const categorySelect = document.getElementById('favoritesCategorySelect');
+  const categoryId = categoryIdFromDom(categorySelect ? categorySelect.value : UNCATEGORIZED_DOM_ID);
   let   url        = urlInput.value.trim();
   let   title      = titleInput.value.trim();
   if (!url) return;
@@ -2230,13 +3080,13 @@ document.addEventListener('submit', async (e) => {
 
   try {
     if (editingId) {
-      const fields = { url, title };
+      const fields = { url, title, categoryId };
       if (pendingLogoDataUrl)      fields.customLogo = pendingLogoDataUrl;
       else if (clearCustomLogo)    fields.customLogo = null;  // null sentinel → delete
       await updateFavorite(editingId, fields);
       showToast(t('favoriteUpdated'));
     } else {
-      const ok = await addFavorite(url, title, pendingLogoDataUrl);
+      const ok = await addFavorite(url, title, pendingLogoDataUrl, categoryId);
       if (!ok) {
         showToast(t('alreadyAdded'));
         return;
@@ -2258,26 +3108,30 @@ document.addEventListener('submit', async (e) => {
 
 
 /* ----------------------------------------------------------------
-   FAVORITES DRAG-AND-DROP — reorder cards within the favorites column.
-
-   Scope: strictly limited to the favorites column. Drops elsewhere on
-   the page (including the OpenTabs section) are ignored. This is
-   intentional — dragging onto OpenTabs used to "open as new tab", but
-   that feature was confusing and got removed.
-
-   Drop targets:
-     - another card        → swap slots
-     - empty slot          → place there
-     - anywhere else       → no-op
+   FAVORITES + CATEGORY DRAG-AND-DROP
    ---------------------------------------------------------------- */
 let _draggedFavId = null;
+let _draggedCategoryId = null;
 
 function clearDropMarkers() {
-  document.querySelectorAll('.favorite-item.drop-target, .favorite-slot-empty.drop-target')
+  document.querySelectorAll(
+    '.favorite-item.drop-target, .favorite-slot-empty.drop-target, ' +
+    '.favorite-category-header.drop-target'
+  )
     .forEach(el => el.classList.remove('drop-target'));
 }
 
 document.addEventListener('dragstart', (e) => {
+  if (window.TabHomeSources && window.TabHomeSources.handleDragStart(e)) return;
+  const categoryHeader = e.target.closest('.favorite-category-header[data-category-drag-id]');
+  if (categoryHeader && !e.target.closest('button')) {
+    _draggedCategoryId = categoryHeader.dataset.categoryDragId;
+    categoryHeader.classList.add('dragging');
+    document.body.classList.add('dragging-category');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', _draggedCategoryId);
+    return;
+  }
   const item = e.target.closest('.favorite-item');
   if (!item) return;
   _draggedFavId = item.dataset.favId;
@@ -2288,17 +3142,30 @@ document.addEventListener('dragstart', (e) => {
 });
 
 document.addEventListener('dragend', () => {
-  document.querySelectorAll('.favorite-item.dragging')
+  if (window.TabHomeSources && window.TabHomeSources.handleDragEnd()) return;
+  document.querySelectorAll('.favorite-item.dragging, .favorite-category-header.dragging')
     .forEach(el => el.classList.remove('dragging'));
   document.body.classList.remove('dragging-favorite');
+  document.body.classList.remove('dragging-category');
   clearDropMarkers();
   _draggedFavId = null;
+  _draggedCategoryId = null;
 });
 
 document.addEventListener('dragover', (e) => {
+  if (window.TabHomeSources && window.TabHomeSources.handleDragOver(e)) return;
+  if (_draggedCategoryId) {
+    const header = e.target.closest('.favorite-category-header[data-category-drag-id]');
+    if (header && header.dataset.categoryDragId !== _draggedCategoryId) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearDropMarkers();
+      header.classList.add('drop-target');
+    }
+    return;
+  }
   if (!_draggedFavId) return;
 
-  // Hovering another card → reorder (swap slots on drop)
   const card = e.target.closest('.favorite-item');
   if (card && card.dataset.favId && card.dataset.favId !== _draggedFavId) {
     e.preventDefault();
@@ -2308,50 +3175,82 @@ document.addEventListener('dragover', (e) => {
     return;
   }
 
-  // Hovering an empty slot → place there
   const slot = e.target.closest('.favorite-slot-empty');
   if (slot) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     clearDropMarkers();
     slot.classList.add('drop-target');
+    return;
   }
-  // No third branch — drops outside the favorites grid are not allowed.
+
+  const header = e.target.closest('.favorite-category-header');
+  if (header) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    clearDropMarkers();
+    header.classList.add('drop-target');
+  }
 });
 
 document.addEventListener('drop', async (e) => {
+  if (window.TabHomeSources && await window.TabHomeSources.handleDrop(e)) return;
+  if (_draggedCategoryId) {
+    const draggedCategoryId = _draggedCategoryId;
+    _draggedCategoryId = null;
+    const header = e.target.closest('.favorite-category-header[data-category-drag-id]');
+    if (header && header.dataset.categoryDragId !== draggedCategoryId) {
+      e.preventDefault();
+      await reorderCategory(draggedCategoryId, header.dataset.categoryDragId);
+      clearDropMarkers();
+      await renderFavoritesColumn();
+    }
+    return;
+  }
   if (!_draggedFavId) return;
   const draggedId = _draggedFavId;
   _draggedFavId = null;
 
-  // Drop on another card → swap slots
   const card = e.target.closest('.favorite-item');
   if (card && card.dataset.favId && card.dataset.favId !== draggedId) {
     e.preventDefault();
     clearDropMarkers();
     const favorites = await getFavorites();
-    const a = favorites.find(f => f.id === draggedId);
-    const b = favorites.find(f => f.id === card.dataset.favId);
-    if (a && b) {
-      const tmp = a.slot;
-      a.slot = b.slot;
-      b.slot = tmp;
-      await chrome.storage.local.set({ favorites });
+    const target = favorites.find(f => f.id === card.dataset.favId);
+    if (target) {
+      await setFavoriteSlot(draggedId, target.slot, target.categoryId);
       await renderFavoritesColumn();
     }
     return;
   }
 
-  // Drop on an empty slot → set slot
   const slot = e.target.closest('.favorite-slot-empty');
   if (slot) {
     e.preventDefault();
     clearDropMarkers();
     const newSlot = parseInt(slot.dataset.slot, 10);
     if (!Number.isNaN(newSlot)) {
-      await setFavoriteSlot(draggedId, newSlot);
+      await setFavoriteSlot(
+        draggedId,
+        newSlot,
+        categoryIdFromDom(slot.dataset.categoryId)
+      );
       await renderFavoritesColumn();
     }
+    return;
+  }
+
+  const header = e.target.closest('.favorite-category-header');
+  if (header) {
+    e.preventDefault();
+    clearDropMarkers();
+    const targetCategoryId = categoryIdFromDom(
+      header.closest('.favorite-category').dataset.categoryId
+    );
+    const favorites = await getFavorites();
+    const targetSlot = firstFreeSlot(favorites, targetCategoryId, draggedId);
+    await setFavoriteSlot(draggedId, targetSlot, targetCategoryId);
+    await renderFavoritesColumn();
     return;
   }
 
@@ -2394,8 +3293,7 @@ if (chrome.tabs && chrome.tabs.onCreated) {
 if (chrome.storage && chrome.storage.onChanged) {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!changes.favorites) return;
-    if (_suppressFavReRender) return;   // local iconUrl batch write — skip
+    if (!changes.favorites && !changes.favoriteCategories && !changes.uncategorizedCollapsed) return;
     renderFavoritesColumn();
   });
 }
@@ -2407,7 +3305,7 @@ if (chrome.storage && chrome.storage.onChanged) {
 (async () => {
   await loadLang();
   await loadTheme();
-  await migrateAwayFromFolders();
+  await migrateFavoriteCategories();
   applyStaticI18n();
   await renderDashboard();
 })();

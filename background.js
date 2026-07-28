@@ -126,7 +126,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const { favorites = [] } = await chrome.storage.local.get('favorites');
     if (favorites.some(f => f.url === url)) return;
     // Place at the first free slot — no upper bound.
-    const taken = new Set(favorites.map(f => f.slot));
+    const taken = new Set(
+      favorites
+        .filter(f => !f.categoryId)
+        .map(f => f.slot)
+    );
     let slot = 0;
     while (taken.has(slot)) slot++;
     favorites.push({
@@ -134,6 +138,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       url,
       title:   title || url,
       addedAt: new Date().toISOString(),
+      categoryId: null,
       slot,
     });
     await chrome.storage.local.set({ favorites });

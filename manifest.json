@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "tab-home",
-  "version": "1.0.0",
-  "description": "tab-home — your personal new tab page. Long-term favorites, open tabs by domain, save for later.",
-  "permissions": ["tabs", "activeTab", "storage", "contextMenus", "favicon"],
+  "version": "1.2.0",
+  "description": "tab-home — custom favorites, live Chrome tab groups and bookmarks, system-aware themes, and open tabs by domain.",
+  "permissions": ["tabs", "tabGroups", "activeTab", "storage", "contextMenus", "favicon"],
+  "optional_permissions": ["bookmarks"],
   "host_permissions": ["<all_urls>"],
   "chrome_url_overrides": { "newtab": "index.html" },
   "background": { "service_worker": "background.js" },

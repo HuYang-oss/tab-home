@@ -177,6 +177,51 @@ header {
   height: 14px;
 }
 
+.theme-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.theme-menu {
+  position: absolute;
+  z-index: 1200;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 132px;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.theme-menu-item {
+  width: 100%;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 11px/1.2 'DM Sans', sans-serif;
+  text-align: left;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.theme-menu-item:hover,
+.theme-menu-item:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
+  color: var(--accent-amber);
+}
+
+.theme-menu-item[aria-checked="true"]::after {
+  content: '✓';
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
 /* ---- Hello Web duplicate-tabs pill (sits inline in the header) ----
    Capped to the same height as the other header controls (≈22px) so
    showing/hiding it doesn't change the header's height. */
@@ -840,9 +885,8 @@ footer {
   flex-direction: column;
 }
 
-/* Make the list grow to fill the column so users can drop a card into
-   the empty area below the existing items. */
-.favorites-column .favorites-list {
+/* Make the grouped list grow to fill the column. */
+.favorites-column > .favorite-groups {
   flex: 1;
   align-content: start;
 }
@@ -879,6 +923,16 @@ footer {
 .favorites-add-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.favorites-add-btn:focus-visible,
+.theme-toggle:focus-visible,
+.lang-toggle:focus-visible,
+.category-collapse-btn:focus-visible,
+.category-menu-btn:focus-visible,
+.favorite-menu:focus-visible {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 1px;
 }
 
 .favorites-add-btn.open {
@@ -1012,6 +1066,11 @@ footer {
   border-color: var(--accent-amber);
 }
 
+.favorites-form-select {
+  min-height: 31px;
+  border-radius: 0;
+}
+
 .favorites-form-actions {
   display: flex;
   align-items: center;
@@ -1069,6 +1128,105 @@ footer {
   color: white;
 }
 
+/* ---- Favorite category groups ---- */
+.favorite-groups {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.15vh, 14px);
+  min-height: 0;
+}
+
+.favorite-category {
+  flex: 0 0 auto;
+}
+
+.favorite-category-header {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+  color: var(--muted);
+  cursor: grab;
+}
+
+.favorite-category-header:not([draggable="true"]) {
+  cursor: default;
+}
+
+.favorite-category-header h3 {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+}
+
+.favorite-category-count {
+  min-width: 18px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.favorite-category-header .section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--warm-gray);
+}
+
+.category-collapse-btn,
+.category-menu-btn {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.category-collapse-btn:hover,
+.category-menu-btn:hover {
+  color: var(--accent-amber);
+  background: var(--hover-bg);
+}
+
+.category-collapse-btn svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.15s ease;
+}
+
+.favorite-category.collapsed .category-collapse-btn svg {
+  transform: rotate(-90deg);
+}
+
+.category-menu-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.favorite-category-header.dragging {
+  opacity: 0.4;
+}
+
+.favorite-category-header.drop-target {
+  background: rgba(200, 113, 58, 0.10);
+  box-shadow: inset 0 -2px 0 var(--accent-amber);
+}
+
+body.dragging-favorite .favorite-category-header.drop-target {
+  background: rgba(200, 113, 58, 0.12);
+}
+
 /* Square grid — cards sit flush with no gaps, no borders. */
 .favorites-list {
   display: grid;
@@ -1122,6 +1280,214 @@ footer {
   transition: background 0.12s;
 }
 
+.favorite-slot-empty-compact {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  min-height: 30px;
+  border: 1px dashed var(--warm-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.source-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.source-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.source-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  z-index: 1000;
+  min-width: 158px;
+  padding: 4px;
+  border: 1px solid var(--warm-gray);
+  background: var(--card-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.source-menu-item {
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 11px/1.2 'DM Sans', sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.source-menu-item:hover,
+.source-menu-item:focus-visible {
+  outline: none;
+  background: var(--hover-bg);
+}
+
+.source-check {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--warm-gray);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.source-menu-item[aria-checked="true"] .source-check {
+  border-color: var(--accent-sage);
+  background: var(--accent-sage);
+}
+
+.source-menu-item[aria-checked="true"] .source-check::after {
+  content: "";
+  width: 6px;
+  height: 3px;
+  border-left: 1.5px solid white;
+  border-bottom: 1.5px solid white;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.favorite-source {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1vh, 12px);
+}
+
+.favorite-source + .favorite-source {
+  padding-top: clamp(4px, .8vh, 10px);
+  border-top: 1px solid var(--warm-gray);
+}
+
+.favorite-source-heading {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.favorite-source-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--warm-gray);
+}
+
+.favorite-source-groups {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, 1vh, 12px);
+}
+
+.source-empty {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: 1px dashed var(--warm-gray);
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.source-color-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--source-color, var(--muted));
+}
+
+.bookmark-folder {
+  margin-left: 0;
+}
+
+.bookmark-folder .bookmark-folder {
+  margin-left: 12px;
+}
+
+.bookmark-folder > .favorite-category-header {
+  border-left: 2px solid transparent;
+}
+
+.bookmark-folder[data-bookmark-root="true"] > .favorite-category-header {
+  border-left-color: var(--accent-sage);
+}
+
+.favorite-item.source-item {
+  appearance: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.favorite-item.source-item:focus-visible,
+.favorite-category-header:focus-within {
+  outline: 2px solid var(--accent-sage);
+  outline-offset: -2px;
+}
+
+.source-item-icon-fallback {
+  width: 60%;
+  aspect-ratio: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--warm-gray);
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.source-group-color-grey   { --source-color: #777; }
+.source-group-color-blue   { --source-color: #3b82f6; }
+.source-group-color-red    { --source-color: #dc3b3b; }
+.source-group-color-yellow { --source-color: #d5a51f; }
+.source-group-color-green  { --source-color: #26934b; }
+.source-group-color-pink   { --source-color: #d85b9b; }
+.source-group-color-purple { --source-color: #8b5cf6; }
+.source-group-color-cyan   { --source-color: #1596a5; }
+.source-group-color-orange { --source-color: #f07d32; }
+
+body.dragging-source-item .favorite-category-header,
+body.dragging-source-item .favorite-item {
+  transition: background .12s, box-shadow .12s;
+}
+
+.source-drop-target {
+  background: rgba(200, 113, 58, 0.12) !important;
+  box-shadow: inset 0 -2px 0 var(--accent-amber);
+}
+
+.source-drop-target[data-drop-position="before"] {
+  box-shadow: inset 0 2px 0 var(--accent-amber);
+}
+
+.source-drop-target[data-drop-position="inside"] {
+  box-shadow: inset 3px 0 0 var(--accent-amber);
+}
+
+.source-empty {
+  font-family: 'DM Sans', sans-serif;
+  background: transparent;
+}
+
 body.dragging-favorite .favorite-slot-empty:hover,
 body.dragging-favorite .favorite-slot-empty.drop-target {
   background: rgba(200, 113, 58, 0.1);
@@ -1166,7 +1532,8 @@ body.dragging-favorite .favorite-slot-empty.drop-target {
   padding: 0;
 }
 
-.favorite-item:hover .favorite-menu { visibility: visible; }
+.favorite-item:hover .favorite-menu,
+.favorite-item:focus-within .favorite-menu { visibility: visible; }
 
 .favorite-menu:hover {
   background: var(--hover-bg);
@@ -1201,7 +1568,9 @@ body.dragging-favorite .favorite-slot-empty.drop-target {
   cursor: pointer;
 }
 
-.favorite-popup-item:hover {
+.favorite-popup-item:hover,
+.favorite-popup-item:focus-visible {
+  outline: none;
   background: var(--hover-bg);
 }
 
@@ -1270,6 +1639,45 @@ body.dragging-favorite .favorite-slot-empty.drop-target {
   line-height: 1.5;
 }
 
+/* ---- Category add / rename modal ---- */
+.category-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.category-form {
+  width: 340px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.category-form-error {
+  min-height: 15px;
+  color: var(--accent-rose);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Star + Pin buttons share the same outline/filled pattern. Fill state is
    driven by `.active` class so toggling the class instantly flips between
    hollow and solid, no JS attribute munging. */
@@ -1292,5 +1700,3 @@ body.dragging-favorite .favorite-slot-empty.drop-target {
 .chip-pin:hover     { color: var(--accent-sage); }
 .chip-pin.active,
 .chip-pin.active:hover  { color: var(--accent-sage); }
-
-

@@ -1,120 +1,78 @@
 # tab-home
 
-**让你的新标签页有意义。**
+一个完全在本地运行的 Chrome 新标签页：把自定义收藏、当前窗口的标签页分组和 Chrome 书签放在同一处管理，同时保留按域名整理当前标签页的原有工作流。
 
-tab-home 是一个 Chrome 浏览器扩展，把默认的「新标签页」替换成一个干净的个人仪表板：左侧是长期收藏的网址，右侧是当前打开的所有标签（按域名分组）。
+本项目是对 [wolfyxbt/tab-home](https://github.com/wolfyxbt/tab-home) 的社区定制；`tab-home` 本身派生自 Zara Zhang 的 [zarazhangrui/tab-out](https://github.com/zarazhangrui/tab-out)。感谢两位原作者公开源代码。本仓库继续采用 MIT License，并保留原始版权声明。
 
-完全本地运行——无服务器、无账号、不联网上传任何数据。Fork 自 [tab-out](https://github.com/zarazhangrui/tab-out) by [Zara](https://x.com/zarazhangrui)。
+## 功能
 
----
+- 三档主题：跟随系统、浅色、深色；跟随系统时会实时响应 Chrome/macOS 外观变化。
+- 自定义收藏分类：分类可新增、重命名、折叠、排序和安全删除，收藏可在分类内或分类之间拖动。
+- 高清收藏图标：优先网页触控图标、Manifest 图标和高分辨率 favicon，本地生成适合 Retina 显示的缓存；用户上传的图标永不被自动覆盖。
+- 三种收藏来源：自定义收藏、当前窗口的 Chrome 标签页分组、完整 Chrome 书签目录树可以单独开启或同时显示；首次使用默认只显示标签页分组。
+- 双向同步：标签页分组的名称、折叠、顺序和组内标签顺序，以及书签的标题、网址、目录和顺序，都可以从左栏直接修改并写回 Chrome。
+- 跨来源移动：可以把单个条目拖到另一来源；扩展先创建目标，成功后才删除原收藏、书签或关闭原标签页，并在执行前明确确认。
+- 紧凑自适应布局：每个分组只占实际内容需要的高度，不再固定附加一整排空白放置格。
+- 零依赖、零构建、无账号、无服务器，数据保存在浏览器本地。
 
-## 主要功能
+> Chrome 扩展公开 API 只能读取当前窗口里已经打开的标签页分组，不能读取 Chrome 菜单中“已保存但尚未打开”的分组；从菜单恢复分组后，它会自动出现在 tab-home。
 
-### 收藏区（左半屏）
-- **9×9 网格**，最多收藏 81 个网址
-- 鼠标悬停 → 右上角出现 ⋯ 菜单，可编辑或删除
-- 自动抓取网站 logo（优先 `apple-touch-icon.png`，兜底 Chrome 缓存的 favicon）
-- **二进制缓存**：图标加载成功后转 base64 存进 `chrome.storage.local`，之后刷新页面零网络请求
-- **自定义 logo**：编辑收藏时可上传图片或直接 `Cmd+V` 粘贴剪贴板里的图片，自动压缩到 256×256
-- **智能命名**：留空标题自动从 URL 提取品牌名（`www.binance.com` → `Binance`，`accounts.binance.com` → `Binance`）
+## 安装
 
-### 当前标签区（右半屏）
-- 按域名自动分组成卡片
-- **固定标签**单独置顶显示，与未固定的明确分开
-- 每个标签卡片有四个操作：
-  - ⭐ 加入收藏 / 取消收藏（取消时弹自定义确认框）
-  - 📌 固定 / 取消固定
-  - ✕ 关闭这个标签
-  - 重复标签会显示 `重复 x N` 徽章，悬停变成「关闭重复」按钮
-- **按最近活跃排序**：你刚切过去的网站组所在卡片排在最顶上
-- 实时同步：在浏览器其他位置开/关/切换标签，这里跟着自动刷新
+### 下载发布包
 
-### 右键菜单
-- 在任意网页右键 → 「Add page to tab-home favorites」直接收藏当前页
-- 右键链接 → 「Add link to tab-home favorites」收藏该链接
+从仓库的 Releases 页面下载 `tab-home-v1.2.0.zip` 并解压，然后：
 
-### 其他
-- 🌙 / ☀️ **深色 / 浅色模式切换**（右上角，自动记忆）
-- 🌐 **中英文切换**（右上角，所有 UI 文案跟着切）
-- 直接点收藏 → 当前 tab 跳转；`Cmd+点击` → 后台新 tab；`Cmd+Shift+点击` → 前台新 tab；`Shift+点击` → 新窗口（与原生 `<a>` 链接行为完全一致）
-- 右键收藏 → 弹出 Chrome 标准的链接菜单
+1. 打开 `chrome://extensions`。
+2. 开启右上角“开发者模式”。
+3. 点击“加载已解压的扩展程序”。
+4. 选择解压后的 `tab-home-v1.2.0` 文件夹。
 
----
-
-## 安装方式
-
-### 方法 1：让 Coding Agent 帮你装
-
-把这个仓库地址发给 Claude Code / Codex / Cursor 等 agent，告诉它「install this」：
-
-```
-https://github.com/wolfyxbt/tab-home
-```
-
-它会一步步带你装好。约 1 分钟搞定。
-
-### 方法 2：手动安装
-
-**1. Clone 仓库**
+### 从源码安装
 
 ```bash
-git clone https://github.com/wolfyxbt/tab-home.git
+git clone https://github.com/HuYang-oss/tab-home.git
 ```
 
-**2. 加载到 Chrome**
+随后在 `chrome://extensions` 中选择仓库根目录。
 
-1. 打开 Chrome，访问 `chrome://extensions`
-2. 右上角打开 **开发者模式**
-3. 点击 **加载已解压的扩展程序**
-4. 选择 clone 下来的 `extension/` 文件夹
+如果你此前已经加载过本地版本，请在原目录内更新文件并在扩展管理页点击“重新加载”；保持同一个加载目录可以继续使用原扩展 ID 下的 `chrome.storage.local` 数据。
 
-**3. 打开新标签页**
+## 权限与隐私
 
-你会看到 tab-home 出现。
+| 权限 | 用途 |
+| --- | --- |
+| `tabs` | 读取标签标题和网址、定位、移动或关闭用户明确操作的标签页 |
+| `tabGroups` | 展示并管理当前窗口的标签页分组 |
+| `bookmarks`（可选） | 用户主动开启“书签”来源后，展示并管理 Chrome 书签 |
+| `storage` | 保存自定义收藏、分类、主题、语言和界面折叠状态 |
+| `contextMenus` | 从网页或链接右键菜单加入自定义收藏 |
+| `favicon` | 通过 Chrome 本地图标接口获取 favicon |
+| `<all_urls>` | 从收藏网站自身解析清晰图标；不向第三方图标服务上传网址 |
 
----
+书签权限只在用户第一次开启“书签”来源时请求。扩展不会收集、统计、出售或上传书签、标签页、浏览记录和自定义收藏，详见 [PRIVACY.md](PRIVACY.md)。
 
-## 工作原理
+## 数据与升级
 
+自定义收藏继续保存在原有的 `favorites` 和 `favoriteCategories` 键中，升级不会更改网址、标题、分类、自定义图标或排序。新增的来源选择和书签文件夹折叠状态只保存在 `chrome.storage.local`；标签页分组和书签本身始终由 Chrome 管理，不会被复制为隐藏数据库。
+
+跨来源拖动采用“移动”语义。目标创建失败时原项目保持不变；目标已创建但来源移除失败时，两份内容都会保留并显示提示。
+
+## 开发与校验
+
+项目使用 Manifest V3、原生 JavaScript 和 CSS，无需安装依赖或执行构建：
+
+```bash
+node --check app.js
+node --check sources.js
+node --check background.js
+python3 -m json.tool manifest.json
 ```
-你打开新标签页
-  → tab-home 显示左侧收藏 + 右侧当前标签（按域名分组）
-  → 固定标签独立置顶
-  → 点击任意标签即可切过去
-  → 关掉一组（X 按钮 + 撒花动画 + 音效）
-```
 
-所有运行都在 Chrome 扩展内部完成。无外部服务器、无 API 调用、无数据上传。收藏数据存在 `chrome.storage.local`，你的隐私归你自己。
+## 致谢与许可证
 
----
+- Community customization: [HuYang-oss](https://github.com/HuYang-oss)
+- Based on [wolfyxbt/tab-home](https://github.com/wolfyxbt/tab-home) by [WolfyXBT](https://x.com/wolfyxbt)
+- Originally forked from [zarazhangrui/tab-out](https://github.com/zarazhangrui/tab-out) by [Zara Zhang](https://x.com/zarazhangrui)
 
-## 技术栈
-
-| 用途 | 实现 |
-|------|------|
-| 扩展 | Chrome Manifest V3 |
-| 数据存储 | chrome.storage.local |
-| 图标缓存 | base64 二进制 + 全局图片错误回退链 |
-| 音效 | Web Audio API（合成，无音频文件）|
-| 动效 | CSS transitions + JS 撒花粒子 |
-| 字体 | DM Sans |
-| 多语言 | 自研 i18n 字符串表 |
-
-零依赖，零 npm，零构建。clone 完直接 load。
-
----
-
-## 自定义
-
-`extension/config.local.js`（gitignored）可以放个性化配置。比如自定义某些域名的「主页」分组规则——参考代码里的 `LOCAL_LANDING_PAGE_PATTERNS` 和 `LOCAL_CUSTOM_GROUPS` 默认值。
-
----
-
-## License
-
-MIT
-
----
-
-tab-home by [WolfyXBT](https://x.com/wolfyxbt) · forked from [tab-out](https://github.com/zarazhangrui/tab-out) by [Zara](https://x.com/zarazhangrui)
-
+MIT License，见 [LICENSE](LICENSE)。

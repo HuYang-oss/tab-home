@@ -7,7 +7,7 @@
 
   <!-- Google Fonts: DM Sans is the only typeface used across the page. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -40,8 +40,20 @@
         </div>
         <button class="tab-cleanup-btn" data-action="close-tabout-dupes">Keep one</button>
       </div>
-      <!-- Theme toggle (sun/moon) — flips between light and dark -->
-      <button class="theme-toggle" id="themeToggle" data-action="toggle-theme" title="Toggle theme"></button>
+      <!-- Theme menu — system / light / dark -->
+      <div class="theme-control">
+        <button class="theme-toggle" id="themeToggle" data-action="toggle-theme-menu"
+                type="button" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="themeMenu" title="Theme"></button>
+        <div class="theme-menu" id="themeMenu" role="menu" aria-label="Theme" style="display:none">
+          <button type="button" class="theme-menu-item" role="menuitemradio"
+                  data-action="set-theme" data-theme-mode="system" aria-checked="false"></button>
+          <button type="button" class="theme-menu-item" role="menuitemradio"
+                  data-action="set-theme" data-theme-mode="light" aria-checked="false"></button>
+          <button type="button" class="theme-menu-item" role="menuitemradio"
+                  data-action="set-theme" data-theme-mode="dark" aria-checked="false"></button>
+        </div>
+      </div>
       <!-- Language toggle — shows the OTHER language; click to switch -->
       <button class="lang-toggle" id="langToggle" data-action="toggle-lang"></button>
     </div>
@@ -61,13 +73,45 @@
       <div class="section-header">
         <h2>Favorites</h2>
         <div class="section-line"></div>
+        <div class="source-control">
+          <button class="favorites-add-btn source-toggle" id="sourceToggle"
+                  data-action="toggle-source-menu" type="button"
+                  aria-haspopup="menu" aria-expanded="false"
+                  aria-controls="sourceMenu" title="Choose favorite sources">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m12 3 8.25 4.5L12 12 3.75 7.5 12 3Z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 12 8.25 4.5 8.25-4.5M3.75 16.5 12 21l8.25-4.5"/>
+            </svg>
+          </button>
+          <div class="source-menu" id="sourceMenu" role="menu"
+               aria-label="Choose favorite sources" style="display:none">
+            <button type="button" class="source-menu-item" role="menuitemcheckbox"
+                    data-action="toggle-source" data-source-name="tabGroups" aria-checked="true">
+              <span class="source-check" aria-hidden="true"></span><span data-source-label="tabGroups">Tab groups</span>
+            </button>
+            <button type="button" class="source-menu-item" role="menuitemcheckbox"
+                    data-action="toggle-source" data-source-name="custom" aria-checked="false">
+              <span class="source-check" aria-hidden="true"></span><span data-source-label="custom">Custom</span>
+            </button>
+            <button type="button" class="source-menu-item" role="menuitemcheckbox"
+                    data-action="toggle-source" data-source-name="bookmarks" aria-checked="false">
+              <span class="source-check" aria-hidden="true"></span><span data-source-label="bookmarks">Bookmarks</span>
+            </button>
+          </div>
+        </div>
         <button class="favorites-add-btn" id="favoritesAddToggle" data-action="toggle-favorite-form" title="Add a favorite">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
         </button>
+        <button class="favorites-add-btn" id="categoryAddToggle" data-action="add-category" title="Add a category">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h6l1.5 1.5h9v9.75a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18V6.75Z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 11.25v5.5m2.75-2.75H13"/>
+          </svg>
+        </button>
       </div>
 
-      <!-- List of favorites — populated by renderFavoritesColumn() -->
-      <div class="favorites-list" id="favoritesList"></div>
+      <!-- Category groups + favorites — populated by renderFavoritesColumn() -->
+      <div class="favorite-groups" id="favoritesList"></div>
 
       <!-- Empty state -->
       <div class="favorites-empty" id="favoritesEmpty" style="display:none">
@@ -115,7 +159,7 @@
       </div>
     </div>
     <div class="last-refresh">
-      <span style="color: var(--muted); font-size: 11px;">tab-home by <a href="https://x.com/wolfyxbt" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">WolfyXBT</a> · forked from <a href="https://github.com/zarazhangrui/tab-out" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">tab-out</a> by <a href="https://x.com/zarazhangrui" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">Zara</a></span>
+      <span style="color: var(--muted); font-size: 11px;"><a href="https://github.com/HuYang-oss/tab-home" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">community edition</a> · based on <a href="https://github.com/wolfyxbt/tab-home" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">tab-home</a> by WolfyXBT · from <a href="https://github.com/zarazhangrui/tab-out" target="_top" style="color: var(--muted); text-decoration: underline; text-underline-offset: 2px;">tab-out</a> by Zara</span>
     </div>
   </footer>
 
@@ -130,6 +174,8 @@
     <input type="text" class="favorites-form-input" id="favoritesUrlInput" placeholder="https://..." required autocomplete="off" spellcheck="false">
     <label class="favorites-form-label" for="favoritesTitleInput" id="favoritesTitleLabel">Title</label>
     <input type="text" class="favorites-form-input" id="favoritesTitleInput" placeholder="Title (optional)" autocomplete="off">
+    <label class="favorites-form-label" for="favoritesCategorySelect" id="favoritesCategoryLabel">Category</label>
+    <select class="favorites-form-input favorites-form-select" id="favoritesCategorySelect"></select>
 
     <!-- Custom logo: preview + upload + reset -->
     <div class="favorites-form-logo">
@@ -149,6 +195,22 @@
         <button type="button" class="favorites-form-cancel" data-action="cancel-favorite-form">Cancel</button>
         <button type="submit" class="favorites-form-submit" id="favoritesFormSubmit">Add</button>
       </div>
+    </div>
+  </form>
+</div>
+
+<!-- ================================================================
+     CATEGORY ADD / RENAME MODAL
+     ================================================================ -->
+<div class="category-modal" id="categoryModal" style="display:none">
+  <form class="category-form" id="categoryForm">
+    <label class="favorites-form-label" for="categoryNameInput" id="categoryNameLabel">Category name</label>
+    <input type="text" class="favorites-form-input" id="categoryNameInput"
+           maxlength="60" required autocomplete="off">
+    <div class="category-form-error" id="categoryFormError" role="alert" aria-live="polite"></div>
+    <div class="favorites-form-actions-right">
+      <button type="button" class="favorites-form-cancel" data-action="cancel-category-form">Cancel</button>
+      <button type="submit" class="favorites-form-submit" id="categoryFormSubmit">Add</button>
     </div>
   </form>
 </div>
@@ -184,5 +246,6 @@
 
 <!-- Main dashboard logic — loads last so the DOM is ready -->
 <script src="app.js"></script>
+<script src="sources.js"></script>
 </body>
 </html>
