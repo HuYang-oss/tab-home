@@ -38,6 +38,19 @@ git clone https://github.com/HuYang-oss/tab-home.git
 
 如果你此前已经加载过本地版本，请在原目录内更新文件并在扩展管理页点击“重新加载”；保持同一个加载目录可以继续使用原扩展 ID 下的 `chrome.storage.local` 数据。
 
+## 轻量版：Tab Out
+
+本仓库的 [Releases](https://github.com/HuYang-oss/tab-home/releases) 还发布 **Tab Out** —— 一个更轻量的新标签页插件，专注把当前打开的标签页按域名整理成卡片（实时同步、稍后阅读、重复检测、明暗主题），不含收藏夹、书签和标签组管理。
+
+| 能力 | tab-home | Tab Out |
+| --- | --- | --- |
+| 按域名整理当前标签页 | ✅ | ✅ |
+| 实时同步打开的标签 | ✅ | ✅ |
+| 收藏 / 书签 / 标签组管理 | ✅ | — |
+| 稍后阅读 + 归档 | — | ✅ |
+
+下载 `tab-out-v1.2.0.zip` 解压后，加载方式与上方 tab-home 相同。
+
 ## 权限与隐私
 
 | 权限 | 用途 |
