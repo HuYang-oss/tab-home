@@ -1483,6 +1483,25 @@ body.dragging-favorite .favorite-category-header.drop-target {
   font-weight: 600;
 }
 
+.site-icon-shell {
+  width: 60%;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-icon-shell .favorite-favicon,
+.site-icon-shell .source-item-icon-fallback {
+  width: 100%;
+  height: 100%;
+}
+
+.site-icon-shell .favorite-favicon {
+  object-fit: contain;
+}
+
 .source-group-color-grey   { --source-color: #777; }
 .source-group-color-blue   { --source-color: #3b82f6; }
 .source-group-color-red    { --source-color: #dc3b3b; }

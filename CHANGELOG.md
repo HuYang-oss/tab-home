@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 — Unreleased
+
+- Added shared Retina-quality icon resolution for custom favorites, Chrome bookmarks, and live tab groups.
+- Added website-wide imported icon overrides with automatic restore and refresh actions.
+- Added actual-pixel quality gates, clear letter fallbacks, lazy visible-area resolution, and bounded local icon caching.
+
 ## 1.2.1 — 2026-07-28
 
 - Fixed the optional bookmark permission request so Chrome prompts directly from the user's click.

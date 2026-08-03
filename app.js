@@ -74,6 +74,12 @@ const STRINGS = {
     favoriteDialog: 'Add or edit favorite',
     categoryDialog: 'Add or rename category',
     confirmDialog: 'Confirm action',
+    importSiteIcon: 'Import shared website icon',
+    resetSiteIcon: 'Restore automatic icon',
+    siteIconImported: 'Shared website icon imported',
+    siteIconReset: 'Automatic website icon restored',
+    siteIconInvalid: 'Choose a valid image file',
+    siteIconTooLarge: 'The image must be smaller than 2 MB',
     refreshIcon: 'Refresh icon', iconRefreshing: 'Refreshing icon…',
     iconRefreshed: 'Icon refreshed', iconRefreshFailed: 'Could not find a sharper icon',
     theme: 'Theme', themeSystem: 'Follow system', themeLight: 'Light', themeDark: 'Dark',
@@ -147,6 +153,12 @@ const STRINGS = {
     favoriteDialog: '添加或编辑收藏',
     categoryDialog: '新建或重命名分类',
     confirmDialog: '确认操作',
+    importSiteIcon: '导入同站共用图标',
+    resetSiteIcon: '恢复自动图标',
+    siteIconImported: '同站共用图标已导入',
+    siteIconReset: '已恢复自动网站图标',
+    siteIconInvalid: '请选择有效的图片文件',
+    siteIconTooLarge: '图片大小不能超过 2 MB',
     refreshIcon: '刷新图标', iconRefreshing: '正在刷新图标…',
     iconRefreshed: '图标已刷新', iconRefreshFailed: '没有找到更清晰的图标',
     theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色',
@@ -1404,22 +1416,168 @@ document.addEventListener('error', (e) => {
 /* ----------------------------------------------------------------
    HIGH-RES ICON RESOLVER
 
-   Version 2 inspects the page's icon declarations and web manifest,
-   verifies real dimensions, then stores a normalized 128×128 WebP.
-   Existing customLogo values are never touched.
+   Version 3 shares one Retina-aware resolver between custom favorites,
+   Chrome bookmarks and live tab groups. User-provided per-favorite logos
+   and website-wide overrides always win over automatic results.
    ---------------------------------------------------------------- */
-const ICON_CACHE_VERSION = 2;
+const ICON_CACHE_VERSION = 3;
 const ICON_TARGET_SIZE = 128;
+const MIN_ICON_SOURCE_SIZE = 96;
 const MAX_ICON_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_ICON_DATA_URL_CHARS = 96 * 1024;
-const MAX_ICON_CANDIDATES = 14;
+const MAX_ICON_CANDIDATES = 10;
 const ICON_RESOLVE_CONCURRENCY = 2;
+const SOURCE_ICON_CACHE_KEY = 'sourceIconCache';
+const SITE_ICON_OVERRIDES_KEY = 'siteIconOverrides';
+const SOURCE_ICON_CACHE_MAX_CHARS = 4 * 1024 * 1024;
+const SOURCE_ICON_CACHE_MAX_ENTRIES = 160;
+const SOURCE_ICON_SUCCESS_TTL = 30 * 24 * 60 * 60 * 1000;
+const SOURCE_ICON_MISS_TTL = 7 * 24 * 60 * 60 * 1000;
+const MAX_IMPORTED_SITE_ICON_BYTES = 2 * 1024 * 1024;
 
+let _siteIconCache = {};
+let _siteIconOverrides = {};
+let _siteIconStoresPromise = null;
+let _siteIconObserver = null;
 const _iconResolveQueue = [];
-const _queuedIconIds = new Set();
-const _iconResolveInFlight = new Set();
 const _iconResolvePromises = new Map();
 let _activeIconResolves = 0;
+
+function siteIconKey(pageUrl) {
+  try {
+    const url = new URL(pageUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+    return url.hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function siteIconInitial(pageUrl, title = '') {
+  const key = siteIconKey(pageUrl);
+  const source = key || String(title || '').trim();
+  const first = Array.from(source)[0] || '?';
+  return first.toLocaleUpperCase();
+}
+
+async function ensureSiteIconStores() {
+  if (_siteIconStoresPromise) return _siteIconStoresPromise;
+  _siteIconStoresPromise = chrome.storage.local
+    .get([SOURCE_ICON_CACHE_KEY, SITE_ICON_OVERRIDES_KEY])
+    .then(stored => {
+      const cache = stored[SOURCE_ICON_CACHE_KEY];
+      const overrides = stored[SITE_ICON_OVERRIDES_KEY];
+      _siteIconCache = cache && typeof cache === 'object' ? cache : {};
+      _siteIconOverrides = overrides && typeof overrides === 'object' ? overrides : {};
+    })
+    .catch(err => {
+      console.warn('[tab-home] icon stores unavailable:', err);
+      _siteIconCache = {};
+      _siteIconOverrides = {};
+    });
+  return _siteIconStoresPromise;
+}
+
+function siteIconRecordIsFresh(record, now = Date.now()) {
+  if (!record || record.version !== ICON_CACHE_VERSION) return false;
+  const checkedAt = Number(record.checkedAt) || 0;
+  const ttl = record.status === 'ok' ? SOURCE_ICON_SUCCESS_TTL : SOURCE_ICON_MISS_TTL;
+  return checkedAt > 0 && now - checkedAt < ttl;
+}
+
+function siteIconInnerHtml(pageUrl, title = '') {
+  const key = siteIconKey(pageUrl);
+  const override = key ? _siteIconOverrides[key] : null;
+  const cached = key ? _siteIconCache[key] : null;
+  const now = Date.now();
+  let dataUrl = '';
+  let pending = false;
+
+  if (override && override.dataUrl) {
+    dataUrl = override.dataUrl;
+  } else if (cached && cached.status === 'ok' && cached.dataUrl) {
+    dataUrl = cached.dataUrl;
+    pending = !siteIconRecordIsFresh(cached, now);
+    cached.lastUsed = now;
+  } else if (cached && cached.status === 'miss' && siteIconRecordIsFresh(cached, now)) {
+    return {
+      html: `<span class="source-item-icon-fallback" aria-hidden="true">${escapeHtml(siteIconInitial(pageUrl, title))}</span>`,
+      pending: false,
+    };
+  } else {
+    pending = !!key;
+  }
+
+  if (dataUrl) {
+    return {
+      html: `<img class="favorite-favicon" src="${escapeHtml(dataUrl)}" alt="">`,
+      pending,
+    };
+  }
+
+  return {
+    html: `<span class="source-item-icon-fallback" aria-hidden="true">${escapeHtml(siteIconInitial(pageUrl, title))}</span>`,
+    pending,
+  };
+}
+
+function renderSiteIcon(pageUrl, title = '') {
+  const key = siteIconKey(pageUrl);
+  const inner = siteIconInnerHtml(pageUrl, title);
+  return `<span class="site-icon-shell" data-site-icon-key="${escapeHtml(key)}"
+                data-site-icon-url="${escapeHtml(pageUrl || '')}"
+                data-site-icon-title="${escapeHtml(title || '')}"
+                data-site-icon-pending="${String(inner.pending)}">${inner.html}</span>`;
+}
+
+function refreshSiteIconElements(key) {
+  if (!key) return;
+  document.querySelectorAll(`.site-icon-shell[data-site-icon-key="${CSS.escape(key)}"]`)
+    .forEach(shell => {
+      const inner = siteIconInnerHtml(shell.dataset.siteIconUrl, shell.dataset.siteIconTitle);
+      shell.innerHTML = inner.html;
+      shell.dataset.siteIconPending = String(inner.pending);
+      if (inner.pending) observeSiteIcons(shell.parentElement || document);
+    });
+}
+
+function pruneSiteIconCache() {
+  const entries = Object.entries(_siteIconCache);
+  for (const [key, record] of entries) {
+    if (!record || record.version !== ICON_CACHE_VERSION) delete _siteIconCache[key];
+  }
+  const sorted = Object.entries(_siteIconCache)
+    .sort((a, b) =>
+      (Number(a[1].lastUsed) || Number(a[1].checkedAt) || 0) -
+      (Number(b[1].lastUsed) || Number(b[1].checkedAt) || 0)
+    );
+  let chars = sorted.reduce((total, [, record]) =>
+    total + (typeof record.dataUrl === 'string' ? record.dataUrl.length : 0), 0);
+  while (sorted.length > SOURCE_ICON_CACHE_MAX_ENTRIES ||
+         chars > SOURCE_ICON_CACHE_MAX_CHARS) {
+    const [key, record] = sorted.shift();
+    chars -= typeof record.dataUrl === 'string' ? record.dataUrl.length : 0;
+    delete _siteIconCache[key];
+  }
+}
+
+async function persistSiteIconCacheRecord(key, record) {
+  const stored = await chrome.storage.local.get(SOURCE_ICON_CACHE_KEY);
+  const latest = stored[SOURCE_ICON_CACHE_KEY];
+  const previous = _siteIconCache;
+  _siteIconCache = {
+    ..._siteIconCache,
+    ...(latest && typeof latest === 'object' ? latest : {}),
+    [key]: record,
+  };
+  pruneSiteIconCache();
+  try {
+    await chrome.storage.local.set({ [SOURCE_ICON_CACHE_KEY]: _siteIconCache });
+  } catch (err) {
+    _siteIconCache = previous;
+    throw err;
+  }
+}
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -1450,6 +1608,41 @@ function addIconCandidate(list, seen, url, source, declaredSize = 0) {
   } catch {}
 }
 
+async function fetchIconResource(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readResponseTextLimited(response, maxBytes) {
+  if (!response.body || !response.body.getReader) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) {
+      throw new Error('icon response too large');
+    }
+    return text;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error('icon response too large');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 async function collectIconCandidates(pageUrl) {
   const candidates = [];
   const seen = new Set();
@@ -1457,7 +1650,7 @@ async function collectIconCandidates(pageUrl) {
   try { page = new URL(pageUrl); } catch { return candidates; }
 
   try {
-    const response = await fetch(page.href, {
+    const response = await fetchIconResource(page.href, {
       credentials: 'omit',
       redirect: 'follow',
       headers: { Accept: 'text/html,application/xhtml+xml' },
@@ -1468,7 +1661,7 @@ async function collectIconCandidates(pageUrl) {
         (!contentLength || contentLength <= 1024 * 1024) &&
         /html|xhtml/i.test(contentType)) {
       const baseUrl = response.url || page.href;
-      const documentText = await response.text();
+      const documentText = await readResponseTextLimited(response, 1024 * 1024);
       const doc = new DOMParser().parseFromString(documentText, 'text/html');
       for (const link of doc.querySelectorAll('link[rel][href]')) {
         const rel = String(link.getAttribute('rel') || '').toLowerCase().split(/\s+/);
@@ -1492,7 +1685,7 @@ async function collectIconCandidates(pageUrl) {
       if (manifestLink) {
         try {
           const manifestUrl = new URL(manifestLink.getAttribute('href'), baseUrl).href;
-          const manifestResponse = await fetch(manifestUrl, { credentials: 'omit' });
+          const manifestResponse = await fetchIconResource(manifestUrl, { credentials: 'omit' });
           if (manifestResponse.ok) {
             const manifest = await manifestResponse.json();
             for (const icon of Array.isArray(manifest.icons) ? manifest.icons : []) {
@@ -1515,14 +1708,12 @@ async function collectIconCandidates(pageUrl) {
   addIconCandidate(candidates, seen, `${page.origin}/apple-touch-icon.png`, 'apple-touch-icon', 180);
   addIconCandidate(candidates, seen, `${page.origin}/apple-touch-icon-precomposed.png`, 'apple-touch-icon', 180);
   addIconCandidate(candidates, seen, `${page.origin}/favicon.ico`, 'favicon-ico', 64);
-  addIconCandidate(candidates, seen, getFaviconUrl(page.href, ICON_TARGET_SIZE), 'chrome-favicon', ICON_TARGET_SIZE);
 
   const sourceRank = {
     'web-manifest': 4,
     'apple-touch-icon': 3,
     'page-icon': 2,
     'favicon-ico': 1,
-    'chrome-favicon': 0,
   };
   return candidates
     .sort((a, b) =>
@@ -1534,30 +1725,22 @@ async function collectIconCandidates(pageUrl) {
 
 async function fetchIconCandidate(candidate) {
   try {
-    const response = await fetch(candidate.url, { credentials: 'omit', redirect: 'follow' });
+    const response = await fetchIconResource(candidate.url, { credentials: 'omit', redirect: 'follow' });
     if (!response.ok) return null;
     const length = Number(response.headers.get('content-length') || 0);
     if (length > MAX_ICON_DOWNLOAD_BYTES) return null;
     let blob = await response.blob();
     if (!blob.size || blob.size > MAX_ICON_DOWNLOAD_BYTES) return null;
-    if (/svg/i.test(blob.type) || /\.svg(?:$|[?#])/i.test(candidate.url)) {
+    const isVector = /svg/i.test(blob.type) || /\.svg(?:$|[?#])/i.test(candidate.url);
+    if (isVector) {
       const svgText = await blob.text();
       const openingTag = svgText.match(/<svg\b[^>]*>/i);
-      if (openingTag && !/\bwidth\s*=/i.test(openingTag[0])) {
-        const viewBoxAttr = openingTag[0].match(/\bviewBox\s*=\s*["']([^"']+)["']/i);
-        const viewBoxValues = viewBoxAttr
-          ? viewBoxAttr[1].trim().split(/[\s,]+/).map(Number)
-          : [];
-        const viewWidth = viewBoxValues.length === 4 && viewBoxValues[2] > 0
-          ? viewBoxValues[2]
-          : ICON_TARGET_SIZE;
-        const viewHeight = viewBoxValues.length === 4 && viewBoxValues[3] > 0
-          ? viewBoxValues[3]
-          : ICON_TARGET_SIZE;
-        const ratio = Math.max(viewWidth, viewHeight) / 512;
-        const width = Math.max(1, Math.round(viewWidth / ratio));
-        const height = Math.max(1, Math.round(viewHeight / ratio));
-        const sizedSvg = svgText.replace(/<svg\b/i, `<svg width="${width}" height="${height}"`);
+      if (openingTag) {
+        const sanitizedOpening = openingTag[0]
+          .replace(/\swidth\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i, '')
+          .replace(/\sheight\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i, '')
+          .replace(/<svg\b/i, '<svg width="512" height="512"');
+        const sizedSvg = svgText.replace(openingTag[0], sanitizedOpening);
         blob = new Blob([sizedSvg], { type: 'image/svg+xml' });
       }
     }
@@ -1568,7 +1751,7 @@ async function fetchIconCandidate(candidate) {
       bitmap.close();
       return null;
     }
-    return { ...candidate, blob, bitmap, width, height };
+    return { ...candidate, blob, bitmap, width, height, isVector };
   } catch {
     return null;
   }
@@ -1600,19 +1783,20 @@ async function normalizeResolvedIcon(resolved) {
   return dataUrl.length <= MAX_ICON_DATA_URL_CHARS ? dataUrl : '';
 }
 
-async function resolveAndCacheFavoriteIcon(favId) {
-  const favorites = await getFavorites();
-  const favorite = favorites.find(f => f.id === favId);
-  if (!favorite || favorite.customLogo) return false;
-
-  const candidates = await collectIconCandidates(favorite.url);
+async function resolveBestSiteIcon(pageUrl) {
+  const candidates = await collectIconCandidates(pageUrl);
   let best = null;
   for (const candidate of candidates) {
     const resolved = await fetchIconCandidate(candidate);
     if (!resolved) continue;
     const pixels = Math.min(resolved.width, resolved.height);
+    if (!resolved.isVector && pixels < MIN_ICON_SOURCE_SIZE) {
+      resolved.bitmap.close();
+      continue;
+    }
     const bestPixels = best ? Math.min(best.width, best.height) : -1;
-    if (!best || pixels > bestPixels) {
+    const betterVector = resolved.isVector && best && !best.isVector;
+    if (!best || betterVector || (resolved.isVector === best.isVector && pixels > bestPixels)) {
       if (best && best.bitmap) best.bitmap.close();
       best = resolved;
     } else {
@@ -1620,71 +1804,206 @@ async function resolveAndCacheFavoriteIcon(favId) {
     }
     if (best && Math.min(best.width, best.height) >= 512) break;
   }
+  if (!best) return null;
+  const dataUrl = await normalizeResolvedIcon(best);
+  if (!dataUrl) return null;
+  return {
+    dataUrl,
+    width: best.width,
+    height: best.height,
+    source: best.source,
+  };
+}
 
-  let dataUrl = '';
-  if (best) dataUrl = await normalizeResolvedIcon(best);
-  const latest = await getFavorites();
-  const latestFavorite = latest.find(f => f.id === favId);
-  if (!latestFavorite || latestFavorite.customLogo) return false;
-  if (dataUrl) {
-    latestFavorite.iconUrl = dataUrl;
-    latestFavorite.iconWidth = best.width;
-    latestFavorite.iconHeight = best.height;
-    latestFavorite.iconSource = best.source;
-  }
-  latestFavorite.iconVersion = ICON_CACHE_VERSION;
-  latestFavorite.iconCheckedAt = new Date().toISOString();
-  await chrome.storage.local.set({ favorites: latest });
-  return !!dataUrl;
+async function resolveAndCacheSiteIcon(pageUrl, force = false) {
+  await ensureSiteIconStores();
+  const key = siteIconKey(pageUrl);
+  if (!key) return false;
+  if (_siteIconOverrides[key] && _siteIconOverrides[key].dataUrl) return true;
+  const existing = _siteIconCache[key];
+  if (!force && siteIconRecordIsFresh(existing)) return existing.status === 'ok';
+
+  const resolved = await resolveBestSiteIcon(pageUrl);
+  const now = Date.now();
+  const record = resolved
+    ? {
+        status: 'ok',
+        ...resolved,
+        version: ICON_CACHE_VERSION,
+        checkedAt: now,
+        lastUsed: now,
+      }
+    : {
+        status: 'miss',
+        version: ICON_CACHE_VERSION,
+        checkedAt: now,
+        lastUsed: now,
+      };
+  _siteIconCache[key] = record;
+  await persistSiteIconCacheRecord(key, record);
+  refreshSiteIconElements(key);
+  return !!resolved;
 }
 
 function drainIconResolveQueue() {
   while (_activeIconResolves < ICON_RESOLVE_CONCURRENCY && _iconResolveQueue.length) {
-    const favId = _iconResolveQueue.shift();
-    _queuedIconIds.delete(favId);
+    const entry = _iconResolveQueue.shift();
     _activeIconResolves++;
-    _iconResolveInFlight.add(favId);
-    const task = resolveAndCacheFavoriteIcon(favId)
-      .catch(err => console.warn('[wolfy] icon resolution failed:', err))
+    const task = resolveAndCacheSiteIcon(entry.url, entry.force)
+      .catch(err => {
+        console.warn('[tab-home] site icon resolution failed:', err);
+        return false;
+      })
       .finally(() => {
-        _iconResolvePromises.delete(favId);
-        _iconResolveInFlight.delete(favId);
+        _iconResolvePromises.delete(entry.key);
         _activeIconResolves--;
         drainIconResolveQueue();
       });
-    _iconResolvePromises.set(favId, task);
+    _iconResolvePromises.set(entry.key, task);
+    task.then(entry.resolve);
   }
 }
 
-function scheduleFavoriteIconResolution(favId) {
-  if (!favId || _queuedIconIds.has(favId) || _iconResolveInFlight.has(favId)) return;
-  _queuedIconIds.add(favId);
-  _iconResolveQueue.push(favId);
+function scheduleSiteIconResolution(pageUrl, { force = false, priority = false } = {}) {
+  const key = siteIconKey(pageUrl);
+  if (!key) return Promise.resolve(false);
+  if (_iconResolvePromises.has(key)) return _iconResolvePromises.get(key);
+  const queued = _iconResolveQueue.find(entry => entry.key === key);
+  if (queued) return queued.promise;
+  let resolvePromise;
+  const promise = new Promise(resolve => { resolvePromise = resolve; });
+  const entry = { key, url: pageUrl, force, resolve: resolvePromise, promise };
+  if (priority) _iconResolveQueue.unshift(entry);
+  else _iconResolveQueue.push(entry);
   drainIconResolveQueue();
+  return promise;
+}
+
+function observeSiteIcons(root = document) {
+  const icons = root.querySelectorAll
+    ? root.querySelectorAll('.site-icon-shell[data-site-icon-pending="true"]')
+    : [];
+  if (!icons.length) return;
+  if (!('IntersectionObserver' in window)) {
+    icons.forEach(icon => scheduleSiteIconResolution(icon.dataset.siteIconUrl));
+    return;
+  }
+  if (!_siteIconObserver) {
+    _siteIconObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        _siteIconObserver.unobserve(entry.target);
+        scheduleSiteIconResolution(entry.target.dataset.siteIconUrl);
+      }
+    }, {
+      root: document.getElementById('favoritesColumn'),
+      rootMargin: '300px 0px',
+      threshold: 0.01,
+    });
+  }
+  icons.forEach(icon => _siteIconObserver.observe(icon));
+}
+
+async function refreshSiteIconForUrl(pageUrl) {
+  await ensureSiteIconStores();
+  const key = siteIconKey(pageUrl);
+  if (!key) return false;
+  if (_siteIconOverrides[key] && _siteIconOverrides[key].dataUrl) return true;
+  const stored = await chrome.storage.local.get(SOURCE_ICON_CACHE_KEY);
+  const latest = stored[SOURCE_ICON_CACHE_KEY];
+  _siteIconCache = latest && typeof latest === 'object' ? latest : {};
+  delete _siteIconCache[key];
+  await chrome.storage.local.set({ [SOURCE_ICON_CACHE_KEY]: _siteIconCache });
+  refreshSiteIconElements(key);
+  return scheduleSiteIconResolution(pageUrl, { force: true, priority: true });
 }
 
 async function refreshFavoriteIcon(favId) {
-  if (_iconResolvePromises.has(favId)) {
-    return !!(await _iconResolvePromises.get(favId));
-  }
-  if (_queuedIconIds.has(favId)) {
-    _queuedIconIds.delete(favId);
-    const index = _iconResolveQueue.indexOf(favId);
-    if (index >= 0) _iconResolveQueue.splice(index, 1);
-  }
-  _iconResolveInFlight.add(favId);
-  const task = resolveAndCacheFavoriteIcon(favId);
-  _iconResolvePromises.set(favId, task);
-  try {
-    return await task;
-  } catch (err) {
-    console.warn('[wolfy] manual icon refresh failed:', err);
-    return false;
-  } finally {
-    _iconResolvePromises.delete(favId);
-    _iconResolveInFlight.delete(favId);
-  }
+  const favorite = (await getFavorites()).find(item => item.id === favId);
+  if (!favorite || favorite.customLogo) return false;
+  return refreshSiteIconForUrl(favorite.url);
 }
+
+async function importSiteIconForUrl(pageUrl, blob) {
+  if (!blob || !blob.type || !blob.type.startsWith('image/')) {
+    throw new Error('invalid-image');
+  }
+  if (blob.size > MAX_IMPORTED_SITE_ICON_BYTES) throw new Error('image-too-large');
+  const key = siteIconKey(pageUrl);
+  if (!key) throw new Error('invalid-url');
+  const dataUrl = await compressImage(blob, ICON_TARGET_SIZE);
+  if (!dataUrl || dataUrl.length > MAX_ICON_DATA_URL_CHARS * 2) {
+    throw new Error('invalid-image');
+  }
+  await ensureSiteIconStores();
+  const stored = await chrome.storage.local.get(SITE_ICON_OVERRIDES_KEY);
+  const latest = stored[SITE_ICON_OVERRIDES_KEY];
+  const previous = _siteIconOverrides;
+  _siteIconOverrides = {
+    ..._siteIconOverrides,
+    ...(latest && typeof latest === 'object' ? latest : {}),
+    [key]: { dataUrl, updatedAt: Date.now() },
+  };
+  try {
+    await chrome.storage.local.set({ [SITE_ICON_OVERRIDES_KEY]: _siteIconOverrides });
+  } catch (err) {
+    _siteIconOverrides = previous;
+    throw err;
+  }
+  refreshSiteIconElements(key);
+  return true;
+}
+
+async function resetSiteIconForUrl(pageUrl) {
+  await ensureSiteIconStores();
+  const key = siteIconKey(pageUrl);
+  if (!key) return false;
+  const stored = await chrome.storage.local.get([SITE_ICON_OVERRIDES_KEY, SOURCE_ICON_CACHE_KEY]);
+  const overrides = stored[SITE_ICON_OVERRIDES_KEY];
+  const cache = stored[SOURCE_ICON_CACHE_KEY];
+  _siteIconOverrides = overrides && typeof overrides === 'object' ? overrides : {};
+  _siteIconCache = cache && typeof cache === 'object' ? cache : {};
+  delete _siteIconOverrides[key];
+  delete _siteIconCache[key];
+  await chrome.storage.local.set({
+    [SITE_ICON_OVERRIDES_KEY]: _siteIconOverrides,
+    [SOURCE_ICON_CACHE_KEY]: _siteIconCache,
+  });
+  refreshSiteIconElements(key);
+  scheduleSiteIconResolution(pageUrl, { force: true, priority: true });
+  return true;
+}
+
+function chooseSiteIconFile(pageUrl) {
+  const input = document.getElementById('siteIconInput');
+  if (!input || !siteIconKey(pageUrl)) return false;
+  input.value = '';
+  input.dataset.siteIconUrl = pageUrl;
+  input.click();
+  return true;
+}
+
+function refreshAllSiteIconElements() {
+  const keys = new Set(Array.from(document.querySelectorAll('.site-icon-shell'))
+    .map(shell => shell.dataset.siteIconKey)
+    .filter(Boolean));
+  keys.forEach(refreshSiteIconElements);
+  observeSiteIcons(document);
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  let changed = false;
+  if (changes[SOURCE_ICON_CACHE_KEY]) {
+    _siteIconCache = changes[SOURCE_ICON_CACHE_KEY].newValue || {};
+    changed = true;
+  }
+  if (changes[SITE_ICON_OVERRIDES_KEY]) {
+    _siteIconOverrides = changes[SITE_ICON_OVERRIDES_KEY].newValue || {};
+    changed = true;
+  }
+  if (changed) refreshAllSiteIconElements();
+});
 
 
 /* ----------------------------------------------------------------
@@ -1899,6 +2218,7 @@ async function renderFavoritesColumn() {
   if (!list || !empty) return;
 
   try {
+    await ensureSiteIconStores();
     const [items, categories, uncategorizedState] = await Promise.all([
       getFavorites(),
       getFavoriteCategories(),
@@ -1925,11 +2245,7 @@ async function renderFavoritesColumn() {
       builtIn: true,
     });
     list.innerHTML = groups.map(renderFavoriteCategory).join('');
-    for (const item of items) {
-      if (!item.customLogo && item.iconVersion !== ICON_CACHE_VERSION) {
-        scheduleFavoriteIconResolution(item.id);
-      }
-    }
+    observeSiteIcons(list);
   } catch (err) {
     console.warn('[wolfy] Could not load favorites:', err);
   }
@@ -2010,16 +2326,8 @@ function renderFavoriteItem(fav) {
   let imgHtml = '';
   if (fav.customLogo) {
     imgHtml = `<img class="favorite-favicon" src="${escapeHtml(fav.customLogo)}" alt="">`;
-  } else if (fav.iconUrl) {
-    const safe = escapeHtml(fav.iconUrl);
-    imgHtml = `<img class="favorite-favicon" src="${safe}" data-fav-id="${escapeHtml(fav.id)}" alt="">`;
   } else {
-    const chain = getFaviconFallbackChain(fav.url, 128);
-    if (chain.length > 0) {
-      const primary  = escapeHtml(chain[0]);
-      const fallback = escapeHtml(chain.slice(1).join('|'));
-      imgHtml = `<img class="favorite-favicon" src="${primary}" data-fallback="${fallback}" data-fav-id="${escapeHtml(fav.id)}" alt="">`;
-    }
+    imgHtml = renderSiteIcon(fav.url, fav.title || fav.url || '');
   }
 
   return `
@@ -2266,7 +2574,7 @@ document.addEventListener('click', async (e) => {
   if (!actionEl) return;
 
   const action = actionEl.dataset.action;
-  if (window.TabHomeSources &&
+  if (window.TabHomeSources && window.TabHomeSources.handlesAction(action) &&
       await window.TabHomeSources.handleAction(action, e, actionEl)) return;
 
   // ---- Close duplicate tab-out tabs ----
@@ -2407,13 +2715,14 @@ document.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     const id = actionEl.dataset.favId;
+    const pageUrl = actionEl.closest('a[href]')?.href || '';
     if (!id) return;
     const existing = document.getElementById('favoritePopupMenu');
     if (existing && existing.dataset.favId === id) {
       closeFavoriteMenu();
     } else {
       closeFavoriteMenu();
-      openFavoriteMenu(actionEl, id);
+      openFavoriteMenu(actionEl, id, pageUrl);
     }
     return;
   }
@@ -2436,6 +2745,21 @@ document.addEventListener('click', async (e) => {
     const refreshed = await refreshFavoriteIcon(id);
     await renderFavoritesColumn();
     showToast(t(refreshed ? 'iconRefreshed' : 'iconRefreshFailed'));
+    return;
+  }
+  if (action === 'menu-import-site-icon') {
+    const pageUrl = actionEl.dataset.siteUrl;
+    closeFavoriteMenu();
+    if (pageUrl) chooseSiteIconFile(pageUrl);
+    return;
+  }
+  if (action === 'menu-reset-site-icon') {
+    const pageUrl = actionEl.dataset.siteUrl;
+    closeFavoriteMenu();
+    if (!pageUrl) return;
+    await resetSiteIconForUrl(pageUrl);
+    await renderFavoritesColumn();
+    showToast(t('siteIconReset'));
     return;
   }
   if (action === 'menu-remove-favorite') {
@@ -2837,14 +3161,17 @@ async function openEditFavorite(id, returnFocus = null) {
   if (delBtn) delBtn.style.display = 'inline-flex';
 }
 
-function openFavoriteMenu(anchorEl, favId) {
+function openFavoriteMenu(anchorEl, favId, pageUrl = '') {
   const menu = document.createElement('div');
   menu.id = 'favoritePopupMenu';
   menu.className = 'favorite-popup-menu';
   menu.dataset.favId = favId;
+  const safeSiteUrl = escapeHtml(pageUrl);
   menu.innerHTML = `
     <button class="favorite-popup-item" data-action="menu-edit-favorite"   data-fav-id="${favId}">${t('edit')}</button>
     <button class="favorite-popup-item" data-action="menu-refresh-icon" data-fav-id="${favId}">${t('refreshIcon')}</button>
+    <button class="favorite-popup-item" data-action="menu-import-site-icon" data-site-url="${safeSiteUrl}">${t('importSiteIcon')}</button>
+    <button class="favorite-popup-item" data-action="menu-reset-site-icon" data-site-url="${safeSiteUrl}">${t('resetSiteIcon')}</button>
     <button class="favorite-popup-item favorite-popup-item-danger" data-action="menu-remove-favorite" data-fav-id="${favId}">${t('remove')}</button>
   `;
   document.body.appendChild(menu);
@@ -3066,11 +3393,25 @@ async function stageCustomLogoFromBlob(blob) {
   }
 }
 
-// ---- Logo file picker — read as base64 data URL, show in preview ----
-document.addEventListener('change', (e) => {
+// ---- Logo file pickers: per-favorite custom logo and site-wide override. ----
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'siteIconInput') {
+    const file = e.target.files && e.target.files[0];
+    const pageUrl = e.target.dataset.siteIconUrl || '';
+    if (!file || !pageUrl) return;
+    try {
+      await importSiteIconForUrl(pageUrl, file);
+      await renderFavoritesColumn();
+      showToast(t('siteIconImported'));
+    } catch (err) {
+      console.warn('[tab-home] website icon import failed:', err);
+      showToast(t(err && err.message === 'image-too-large' ? 'siteIconTooLarge' : 'siteIconInvalid'));
+    }
+    return;
+  }
   if (e.target.id !== 'favoritesLogoInput') return;
   const file = e.target.files && e.target.files[0];
-  if (file) stageCustomLogoFromBlob(file);
+  if (file) await stageCustomLogoFromBlob(file);
 });
 
 // ---- Paste an image from the clipboard while the favorites modal is open.

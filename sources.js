@@ -21,6 +21,13 @@
     bookmarks: false,
   });
   const SOURCE_ORDER = ['tabGroups', 'custom', 'bookmarks'];
+  const HANDLED_ACTIONS = new Set([
+    'toggle-source-menu', 'toggle-source', 'request-bookmark-permission',
+    'focus-source-tab', 'source-toggle-group', 'source-item-menu',
+    'source-group-menu', 'edit-source-item', 'refresh-source-icon',
+    'import-source-icon', 'reset-source-icon', 'delete-source-item',
+    'rename-source-group', 'delete-source-group',
+  ]);
   const BOOKMARK_PERMISSION = Object.freeze({ permissions: ['bookmarks'] });
   let sourcePrefs = { ...DEFAULT_SOURCES };
   let dragState = null;
@@ -34,16 +41,8 @@
         : 'sourceCustom'
   );
 
-  function faviconHtml(url, id = '') {
-    const chain = getFaviconFallbackChain(url, 128);
-    if (!chain.length) {
-      let letter = '?';
-      try { letter = (friendlyDomain(new URL(url).hostname) || '?')[0].toUpperCase(); } catch {}
-      return `<span class="source-item-icon-fallback" aria-hidden="true">${escapeHtml(letter)}</span>`;
-    }
-    const primary = escapeHtml(chain[0]);
-    const fallback = escapeHtml(chain.slice(1).join('|'));
-    return `<img class="favorite-favicon" src="${primary}" data-fallback="${fallback}"${id ? ` data-source-icon-id="${escapeHtml(id)}"` : ''} alt="">`;
+  function faviconHtml(url, title = '') {
+    return renderSiteIcon(url, title);
   }
 
   async function loadPrefs() {
@@ -207,11 +206,6 @@
       items: items.filter(item => !item.categoryId),
       builtIn: true,
     });
-    for (const item of items) {
-      if (!item.customLogo && item.iconVersion !== ICON_CACHE_VERSION) {
-        scheduleFavoriteIconResolution(item.id);
-      }
-    }
     return sourceSection('custom', groups.map(renderFavoriteCategory).join(''), items.length);
   }
 
@@ -224,7 +218,7 @@
       `${groupId !== '' ? ` data-group-id="${escapeHtml(String(groupId))}"` : ''}` +
       `${parentId !== '' ? ` data-parent-id="${escapeHtml(String(parentId))}"` : ''}`;
     const contents = `
-      ${faviconHtml(url, `${source}:${id}`)}
+      ${faviconHtml(url, title)}
       <span class="favorite-title">${safeTitle}</span>
       <button class="favorite-menu" type="button" data-action="source-item-menu"
               data-source="${safeSource}" data-item-id="${safeId}"
@@ -401,6 +395,7 @@
       do {
         renderPending = false;
         try {
+          await ensureSiteIconStores();
           await loadPrefs();
           applyI18n();
           paintSourceControls();
@@ -409,6 +404,7 @@
           if (sourcePrefs.custom) sections.push(await renderCustomSource());
           if (sourcePrefs.bookmarks) sections.push(await renderBookmarksSource());
           list.innerHTML = sections.join('');
+          observeSiteIcons(list);
           empty.style.display = sections.length ? 'none' : 'block';
           if (!sections.length) empty.textContent = t('sourceSettings');
         } catch (err) {
@@ -471,10 +467,20 @@
     const menu = document.createElement('div');
     menu.id = 'sourcePopupMenu';
     menu.className = 'favorite-popup-menu';
+    const safeItemUrl = escapeHtml(item.url || '');
+    const iconActions = `
+      <button class="favorite-popup-item" data-action="refresh-source-icon"
+              data-site-url="${safeItemUrl}">${escapeHtml(t('refreshIcon'))}</button>
+      <button class="favorite-popup-item" data-action="import-source-icon"
+              data-site-url="${safeItemUrl}">${escapeHtml(t('importSiteIcon'))}</button>
+      <button class="favorite-popup-item" data-action="reset-source-icon"
+              data-site-url="${safeItemUrl}">${escapeHtml(t('resetSiteIcon'))}</button>`;
     menu.innerHTML = source === 'bookmarks'
       ? `<button class="favorite-popup-item" data-action="edit-source-item" data-source="bookmarks" data-item-id="${escapeHtml(id)}">${escapeHtml(t('editBookmark'))}</button>
+         ${iconActions}
          <button class="favorite-popup-item favorite-popup-item-danger" data-action="delete-source-item" data-source="bookmarks" data-item-id="${escapeHtml(id)}">${escapeHtml(t('remove'))}</button>`
-      : `<button class="favorite-popup-item favorite-popup-item-danger" data-action="delete-source-item" data-source="tabGroups" data-item-id="${escapeHtml(id)}">${escapeHtml(t('close'))}</button>`;
+      : `${iconActions}
+         <button class="favorite-popup-item favorite-popup-item-danger" data-action="delete-source-item" data-source="tabGroups" data-item-id="${escapeHtml(id)}">${escapeHtml(t('close'))}</button>`;
     positionPopup(menu, anchorEl);
   }
 
@@ -692,6 +698,31 @@
     if (action === 'edit-source-item') {
       closeSourcePopup();
       await editBookmark(actionEl.dataset.itemId);
+      return true;
+    }
+    if (action === 'refresh-source-icon') {
+      const pageUrl = actionEl.dataset.siteUrl;
+      closeSourcePopup();
+      if (!pageUrl) return true;
+      showToast(t('iconRefreshing'));
+      const refreshed = await refreshSiteIconForUrl(pageUrl);
+      await render();
+      showToast(t(refreshed ? 'iconRefreshed' : 'iconRefreshFailed'));
+      return true;
+    }
+    if (action === 'import-source-icon') {
+      const pageUrl = actionEl.dataset.siteUrl;
+      closeSourcePopup();
+      if (pageUrl) chooseSiteIconFile(pageUrl);
+      return true;
+    }
+    if (action === 'reset-source-icon') {
+      const pageUrl = actionEl.dataset.siteUrl;
+      closeSourcePopup();
+      if (!pageUrl) return true;
+      await resetSiteIconForUrl(pageUrl);
+      await render();
+      showToast(t('siteIconReset'));
       return true;
     }
     if (action === 'delete-source-item') {
@@ -1077,6 +1108,7 @@
   });
 
   window.TabHomeSources = {
+    handlesAction: action => HANDLED_ACTIONS.has(action),
     applyI18n,
     render,
     handleAction,
